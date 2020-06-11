@@ -1,6 +1,7 @@
 import warnings
 import numpy as np
 import matplotlib.pyplot as plt
+from mriseqplot.style import SeqStyle
 from typing import Callable, List
 
 
@@ -20,6 +21,7 @@ class SeqDiagram:
         """
         self.t = t
         self.axes = {}
+        self.style = SeqStyle()
         for axis in axes:
             self.axes[axis] = np.zeros_like(t)
 
@@ -50,13 +52,25 @@ class SeqDiagram:
     def plot_scheme(self):
         """ Plot the sequence diagram """
         fig, axes = plt.subplots(nrows=len(self.axes), sharex=True, sharey=True)
+
         if len(self.axes) == 1:  # a little ugly workaround
             axes = [axes]
+
         for ax, (ax_name, signal) in zip(axes, self.axes.items()):
-            ax.plot(self.t, signal)
+            ax.plot(self.t, signal, color=self.style.color, linewidth=self.style.width)
+
+            if not self.style.axes_ticks:
+                ax.set_xticks([], [])
             ax.set_ylabel(ax_name)
             ax.set_xlabel("t")
             for side in ["left", "top", "right"]:
                 ax.spines[side].set_visible(False)
             ax.spines["bottom"].set_position("zero")
+
+            for side in ["bottom", "left", "top", "right"]:
+                ax.spines[side].set_linewidth(self.style.axes_width)
+                ax.spines[side].set_color(self.style.axes_color)
+
+            ax.axes.get_yaxis().set_visible(False)
+
         plt.show()
