@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 def readme():
-    with open("README.rst") as f:
+    with open("README.md") as f:
         f.read()
 
 
@@ -17,4 +17,5 @@ setup(
     license="MIT",
     packages=find_packages(),
     install_requires=["numpy", "matplotlib"],
+    extras_require={"dev": ["pre-commit"],},
 )

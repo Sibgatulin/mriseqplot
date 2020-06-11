@@ -23,6 +23,12 @@ or if you plan to modify the code, install it in «editable» mode
 ```sh
 pip install -e mriseqplot
 ```
+Furthermore, if you intend to commit to the repository, you'll need pre-commit, so we
+recommend you go with the dev ``extra`` requirements (mind no space before ``[``):
+
+```sh
+pip install -e mriseqplot[dev]
+```
 
 ## License
 
