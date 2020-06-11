@@ -27,4 +27,4 @@ pip install -e mriseqplot
 ## License
 
 ``mriseqplot`` is licensed under the terms of the MIT license.
-Please see the `LICENSE file <https://github.com/Sibgatulin/mriseqplot/blob/master/LICENSE>`_.
+Please see the [LICENSE file](https://github.com/Sibgatulin/mriseqplot/blob/master/LICENSE).
