@@ -45,7 +45,7 @@ class SeqDiagram:
         overlap = np.logical_and(self.axes[axis_name], unit)
         if overlap.any():
             warnings.warn(f"Got an overlap in {axis_name} using {callback.__name__}")
-        self.axes[axis_name] += unit
+        self.axes[axis_name] = self.axes[axis_name] + unit
 
     def plot_scheme(self):
         """ Plot the sequence diagram """

@@ -3,9 +3,16 @@ from mriseqplot.core import SeqDiagram
 from mriseqplot.shapes import trapezoid
 
 
-t = np.linspace(0, 6, 100)
+t = np.linspace(0, 6, 100)[:, None]  # needed for broadcasting later
 sequence = SeqDiagram(t, ["PEG", "FEG"])
-sequence.add_element("PEG", trapezoid, ampl=2, t_start=1, t_flat_out=1, t_ramp_down=2)
+sequence.add_element(
+    "PEG",
+    trapezoid,
+    ampl=np.array([1, 1.5])[None, :],  # some broadcasting magic for stacked gradients
+    t_start=1,
+    t_flat_out=1,
+    t_ramp_down=2,
+)
 sequence.add_element(
     "FEG", trapezoid, ampl=-1, t_start=2, t_flat_out=2.2, t_ramp_down=2.8
 )
