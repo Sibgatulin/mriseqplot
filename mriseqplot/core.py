@@ -57,12 +57,31 @@ class SeqDiagram:
             axes = [axes]
 
         for ax, (ax_name, signal) in zip(axes, self.axes.items()):
-            ax.plot(self.t, signal, color=self.style.color, linewidth=self.style.width)
+            # plotting of the data
+            signalDims = signal.shape
+            for dim in range(signalDims[1]):
+                pltTime = self.t
+                pltSignal = signal[:, dim]
 
+                rmInd = np.where(
+                    pltSignal == 0
+                )  # remove all points where it hits zero,
+                # avoid drawing on the axis
+                pltSignal = np.delete(pltSignal, rmInd)
+                pltTime = np.delete(pltTime, rmInd)
+
+                ax.plot(
+                    pltTime,
+                    pltSignal,
+                    color=self.style.color,
+                    linewidth=self.style.width,
+                )
+
+            # axis formatting
             if not self.style.axes_ticks:
                 ax.set_xticks([], [])
             ax.set_ylabel(ax_name)
-            ax.set_xlabel("t")
+            ax.set_xlabel("")
             for side in ["left", "top", "right"]:
                 ax.spines[side].set_visible(False)
             ax.spines["bottom"].set_position("zero")
@@ -72,5 +91,15 @@ class SeqDiagram:
                 ax.spines[side].set_color(self.style.axes_color)
 
             ax.axes.get_yaxis().set_visible(False)
+            ax.axes.set_xlim(self.t[0], self.t[len(self.t) - 1])
+
+            # labels
+            ax.text(
+                self.t[len(self.t) - 1],
+                0,
+                "t",
+                verticalalignment="top",
+                fontsize=self.style.font_size,
+            )
 
         plt.show()

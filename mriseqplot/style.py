@@ -8,3 +8,4 @@ class SeqStyle:
 
         self.color = (0, 0, 0)
         self.width = 2
+        self.font_size = 20
