@@ -23,12 +23,21 @@ or if you plan to modify the code, install it in «editable» mode
 ```sh
 pip install -e mriseqplot
 ```
-Furthermore, if you intend to commit to the repository, you'll need pre-commit, so we
-recommend you go with the dev ``extra`` requirements (mind no space before ``[``):
+Furthermore, if you intend to commit to the repository, you'll need ``pre-commit``, so
+we recommend you go with the dev ``extra`` requirements (mind no space before ``[``)
+and set ``pre-commit`` up:
 
 ```sh
 pip install -e mriseqplot[dev]
+pre-commit install
 ```
+
+## Contributing to ``mriseqplot``
+
+The project tries to stick with PEP8 and encourages to use ``black`` (see installation
+above).
+Occasionally, there are some [type hints](https://www.python.org/dev/peps/pep-0484)
+but their use is so far... Experimental? 🤔🤷
 
 ## License
 
