@@ -21,9 +21,10 @@ class SeqDiagram:
         """
         self.t = t
         self.axes = {}
-        self.style = SeqStyle()
+        self.axes_styles = {}
         for axis in axes:
             self.axes[axis] = np.zeros_like(t)
+            self.axes_styles[axis] = SeqStyle()
 
     def add_element(self, axis_name: str, callback: Callable, ampl=1, **kwargs):
         """ Generic function to add an element to a waveform
@@ -56,7 +57,12 @@ class SeqDiagram:
         if len(self.axes) == 1:  # a little ugly workaround
             axes = [axes]
 
-        for ax, (ax_name, signal) in zip(axes, self.axes.items()):
+        print(axes)
+        print(self.axes.items())
+        print(self.axes_styles.items())
+        for ax, (ax_name, signal), (style_name, style) in zip(
+            axes, self.axes.items(), self.axes_styles.items()
+        ):
             # plotting of the data
             signal_dims = signal.shape
             for dim in range(signal_dims[1]):
@@ -69,14 +75,11 @@ class SeqDiagram:
                 plt_time = np.delete(plt_time, remove_ind)
 
                 ax.plot(
-                    plt_time,
-                    plt_signal,
-                    color=self.style.color,
-                    linewidth=self.style.width,
+                    plt_time, plt_signal, color=style.color, linewidth=style.width,
                 )
 
             # axis formatting
-            if not self.style.axes_ticks:
+            if not style.axes_ticks:
                 ax.set_xticks([], [])
             ax.set_ylabel(ax_name)
             ax.set_xlabel("")
@@ -85,8 +88,8 @@ class SeqDiagram:
             ax.spines["bottom"].set_position("zero")
 
             for side in ["bottom", "left", "top", "right"]:
-                ax.spines[side].set_linewidth(self.style.axes_width)
-                ax.spines[side].set_color(self.style.axes_color)
+                ax.spines[side].set_linewidth(style.axes_width)
+                ax.spines[side].set_color(style.axes_color)
 
             ax.axes.get_yaxis().set_visible(False)
             ax.axes.set_xlim(self.t[0], self.t[len(self.t) - 1])
@@ -98,8 +101,8 @@ class SeqDiagram:
                 0,
                 head_width=0.15,
                 head_length=0.1,
-                fc=self.style.axes_color,
-                ec=self.style.axes_color,
+                fc=style.axes_color,
+                ec=style.axes_color,
                 clip_on=False,
             )
 
@@ -111,7 +114,7 @@ class SeqDiagram:
                 -np.abs(cur_ylim[0] - cur_ylim[1]) * 0.05,
                 "t",
                 verticalalignment="top",
-                fontsize=self.style.font_size,
+                fontsize=style.font_size,
             )
 
         plt.show()

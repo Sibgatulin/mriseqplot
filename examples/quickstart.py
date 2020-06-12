@@ -1,10 +1,23 @@
 import numpy as np
 from mriseqplot.core import SeqDiagram
 from mriseqplot.shapes import trapezoid
+from mriseqplot.style import SeqStyle
 
+# define the time axis
+t = np.linspace(-0.2, 6, 10000)[:, None]
 
-t = np.linspace(-0.2, 6, 10000)[:, None]  # needed for broadcasting later
+# create sequence diagram object
 sequence = SeqDiagram(t, ["Slice Selection", "Phase Encoding", "Frequency Encoding"])
+
+# set custom style for phase encoding and slice selection
+style_ph = SeqStyle()
+style_ph.color = [0.7, 0, 0]
+sequence.axes_styles["Phase Encoding"] = style_ph
+
+style_ss = SeqStyle()
+style_ss.color = [0.0, 0, 0.7]
+sequence.axes_styles["Slice Selection"] = style_ss
+
 sequence.add_element(
     "Phase Encoding",
     trapezoid,
