@@ -12,10 +12,12 @@ sequence = SeqDiagram(t, ["Slice Selection", "Phase Encoding", "Frequency Encodi
 # set custom style for phase encoding and slice selection
 style_ph = SeqStyle()
 style_ph.color = [0.7, 0, 0]
+style_ph.color_fill = [0.7, 0, 0, 0.2]
 sequence.axes_styles["Phase Encoding"] = style_ph
 
 style_ss = SeqStyle()
 style_ss.color = [0.0, 0, 0.7]
+style_ss.color_fill = [0.0, 0, 0.7, 0.2]
 sequence.axes_styles["Slice Selection"] = style_ss
 
 sequence.add_element(

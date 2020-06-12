@@ -74,6 +74,7 @@ class SeqDiagram:
                 plt_signal = np.delete(plt_signal, remove_ind)
                 plt_time = np.delete(plt_time, remove_ind)
 
+                ax.fill_between(plt_time, plt_signal, color=style.color_fill)
                 ax.plot(
                     plt_time, plt_signal, color=style.color, linewidth=style.width,
                 )
