@@ -58,21 +58,19 @@ class SeqDiagram:
 
         for ax, (ax_name, signal) in zip(axes, self.axes.items()):
             # plotting of the data
-            signalDims = signal.shape
-            for dim in range(signalDims[1]):
-                pltTime = self.t
-                pltSignal = signal[:, dim]
+            signal_dims = signal.shape
+            for dim in range(signal_dims[1]):
+                plt_time = self.t
+                plt_signal = signal[:, dim]
 
-                rmInd = np.where(
-                    pltSignal == 0
-                )  # remove all points where it hits zero,
-                # avoid drawing on the axis
-                pltSignal = np.delete(pltSignal, rmInd)
-                pltTime = np.delete(pltTime, rmInd)
+                # remove all points where it hits zero to avoid drawing on the axis
+                remove_ind = np.where(plt_signal == 0)
+                plt_signal = np.delete(plt_signal, remove_ind)
+                plt_time = np.delete(plt_time, remove_ind)
 
                 ax.plot(
-                    pltTime,
-                    pltSignal,
+                    plt_time,
+                    plt_signal,
                     color=self.style.color,
                     linewidth=self.style.width,
                 )
@@ -93,10 +91,24 @@ class SeqDiagram:
             ax.axes.get_yaxis().set_visible(False)
             ax.axes.set_xlim(self.t[0], self.t[len(self.t) - 1])
 
-            # labels
-            ax.text(
-                self.t[len(self.t) - 1],
+            ax.axes.arrow(
                 0,
+                0,
+                np.squeeze(self.t[len(self.t) - 1]),
+                0,
+                head_width=0.15,
+                head_length=0.1,
+                fc=self.style.axes_color,
+                ec=self.style.axes_color,
+                clip_on=False,
+            )
+
+            # labels
+            cur_ylim = ax.axes.set_ylim()
+            cur_xlim = ax.axes.set_xlim()
+            ax.text(
+                self.t[len(self.t) - 1] + np.abs(cur_xlim[0] - cur_xlim[1]) * 0.01,
+                -np.abs(cur_ylim[0] - cur_ylim[1]) * 0.05,
                 "t",
                 verticalalignment="top",
                 fontsize=self.style.font_size,

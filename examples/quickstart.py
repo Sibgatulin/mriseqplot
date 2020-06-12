@@ -8,10 +8,8 @@ sequence = SeqDiagram(t, ["Slice Selection", "Phase Encoding", "Frequency Encodi
 sequence.add_element(
     "Phase Encoding",
     trapezoid,
-    # ampl=np.array(np.linspace(-1,1,10))[None, :],  # some broadcasting magic for stacked gradients
-    ampl=np.array(np.linspace(-1, 1, 10))[
-        None, :
-    ],  # some broadcasting magic for stacked gradients
+    # some broadcasting magic for stacked gradients
+    ampl=np.array(np.linspace(-1, 1, 10))[None, :],
     t_start=1.2,
     t_flat_out=1.4,
     t_ramp_down=1.8,
