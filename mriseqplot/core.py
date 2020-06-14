@@ -1,8 +1,12 @@
 import warnings
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-from mriseqplot.style import SeqStyle
 from typing import Callable, List
+
+mpl.rcParams["lines.linewidth"] = 2
+mpl.rcParams["axes.linewidth"] = 2
+mpl.rcParams["axes.labelsize"] = 20
 
 
 class Sequence:
@@ -21,12 +25,10 @@ class Sequence:
         """
         self.t = t
         self.channels = {}
-        self.axes_names = {}
-        self.axes_styles = {}
-        for channel in channels:
+        self.channel_color = {}
+        for idx, channel in enumerate(channels):
             self.channels[channel] = np.zeros_like(t)
-            self.axes_styles[channel] = SeqStyle()
-            self.axes_names[channel] = channel
+            self.channel_color[channel] = f"C{idx}"
 
     def add_element(self, channel_name: str, callback: Callable, ampl=1, **kwargs):
         """ Generic function to add an element to a waveform
@@ -59,28 +61,22 @@ class Sequence:
             ylim[0] = min(ylim[0], np.min(signal))
             ylim[1] = max(ylim[1], np.max(signal))
 
-        for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels,):
+        for ax, ax_name in zip(axes, labels,):
             ax.set_yticks([])
             ax.set_ylabel(
                 ax_name,
-                fontsize=style.font_size,
                 rotation=0,
                 verticalalignment="center",
                 horizontalalignment="right",
                 multialignment="center",
             )
-            if not style.axes_ticks:
-                ax.set_xticks([])
-            ax.set_xlabel("t", fontsize=style.font_size)
+            ax.set_xticks([])
+            ax.set_xlabel("t")
             ax.xaxis.set_label_coords(1.02, 0.4)
 
             for side in ["left", "top", "right"]:
                 ax.spines[side].set_visible(False)
             ax.spines["bottom"].set_position("zero")
-
-            for side in ["bottom", "left", "top", "right"]:
-                ax.spines[side].set_linewidth(style.axes_width)
-                ax.spines[side].set_color(style.axes_color)
 
             ax.axes.set_xlim(self.t[0], self.t[-1])
             ax.axes.set_ylim(ylim[0], ylim[1])
@@ -92,14 +88,14 @@ class Sequence:
                 0,
                 head_width=0.15,
                 head_length=0.1,
-                fc=style.axes_color,
-                ec=style.axes_color,
                 clip_on=False,
             )
         return axes
 
-    def _plot_channel(self, ax, signal, style):
+    def _plot_channel(self, ax, name):
         # plotting of the data
+        signal = self.channels[name]
+        color = self.channel_color[name]
         signal_dims = signal.shape
         for dim in range(signal_dims[1]):
             plt_time = self.t
@@ -110,13 +106,9 @@ class Sequence:
             plt_signal = np.delete(plt_signal, remove_ind)
             plt_time = np.delete(plt_time, remove_ind)
 
-            ax.fill_between(plt_time, plt_signal, color=style.color_fill)
+            ax.fill_between(plt_time, plt_signal, color=color, alpha=0.3)
             ax.plot(
-                plt_time,
-                plt_signal,
-                color=style.color,
-                linewidth=style.width,
-                clip_on=False,
+                plt_time, plt_signal, color=color, clip_on=False,
             )
         return ax
 
@@ -145,14 +137,10 @@ class Sequence:
             # only one channel for this axis
             if isinstance(channels, str):
                 name_channel = channels
-                self._plot_channel(
-                    ax, self.channels[name_channel], self.axes_styles[name_channel]
-                )
+                self._plot_channel(ax, name_channel)
             # this axis represents a number of channels
             elif isinstance(channels, (list, tuple)):
                 for name_channel in channels:
-                    self._plot_channel(
-                        ax, self.channels[name_channel], self.axes_styles[name_channel]
-                    )
+                    self._plot_channel(ax, name_channel)
 
         plt.show()
