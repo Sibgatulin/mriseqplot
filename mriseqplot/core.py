@@ -52,46 +52,16 @@ class SeqDiagram:
             warnings.warn(f"Got an overlap in {axis_name} using {callback.__name__}")
         self.axes[axis_name] = self.axes[axis_name] + unit
 
-    def plot_scheme(self):
-        """ Plot the sequence diagram """
-        fig, axes = plt.subplots(nrows=len(self.axes), sharex=True, sharey=True)
-
-        if len(self.axes) == 1:  # a little ugly workaround
-            axes = [axes]
-
+    def _format_axes(self, axes):
         # set consistent y-limit as maximum from all plots
         ylim = [0.0, 0.0]
         for signal in self.axes.values():
             ylim[0] = min(ylim[0], np.min(signal))
             ylim[1] = max(ylim[1], np.max(signal))
 
-        for ax, signal, style, ax_name in zip(
-            axes,
-            self.axes.values(),
-            self.axes_styles.values(),
-            self.axes_names.values(),
+        for ax, style, ax_name in zip(
+            axes, self.axes_styles.values(), self.axes_names.values(),
         ):
-            # plotting of the data
-            signal_dims = signal.shape
-            for dim in range(signal_dims[1]):
-                plt_time = self.t
-                plt_signal = signal[:, dim]
-
-                # remove all points where it hits zero to avoid drawing on the axis
-                remove_ind = np.where(plt_signal == 0)
-                plt_signal = np.delete(plt_signal, remove_ind)
-                plt_time = np.delete(plt_time, remove_ind)
-
-                ax.fill_between(plt_time, plt_signal, color=style.color_fill)
-                ax.plot(
-                    plt_time,
-                    plt_signal,
-                    color=style.color,
-                    linewidth=style.width,
-                    clip_on=False,
-                )
-
-            # axis formatting
             ax.set_yticks([])
             ax.set_ylabel(
                 ax_name,
@@ -128,5 +98,38 @@ class SeqDiagram:
                 ec=style.axes_color,
                 clip_on=False,
             )
+        return axes
+
+    def plot_scheme(self):
+        """ Plot the sequence diagram """
+        fig, axes = plt.subplots(nrows=len(self.axes), sharex=True, sharey=True)
+
+        if len(self.axes) == 1:  # a little ugly workaround
+            axes = [axes]
+
+        axes = self._format_axes(axes)
+
+        for ax, signal, style in zip(
+            axes, self.axes.values(), self.axes_styles.values(),
+        ):
+            # plotting of the data
+            signal_dims = signal.shape
+            for dim in range(signal_dims[1]):
+                plt_time = self.t
+                plt_signal = signal[:, dim]
+
+                # remove all points where it hits zero to avoid drawing on the axis
+                remove_ind = np.where(plt_signal == 0)
+                plt_signal = np.delete(plt_signal, remove_ind)
+                plt_time = np.delete(plt_time, remove_ind)
+
+                ax.fill_between(plt_time, plt_signal, color=style.color_fill)
+                ax.plot(
+                    plt_time,
+                    plt_signal,
+                    color=style.color,
+                    linewidth=style.width,
+                    clip_on=False,
+                )
 
         plt.show()
