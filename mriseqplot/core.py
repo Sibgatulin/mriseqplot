@@ -57,6 +57,12 @@ class SeqDiagram:
         if len(self.axes) == 1:  # a little ugly workaround
             axes = [axes]
 
+        # set consistent y-limit as maximum from all plots
+        ylim = np.array([0.0, 0.0])
+        for (ax_name, signal) in self.axes.items():
+            ylim[0] = min(ylim[0], np.min(signal))
+            ylim[1] = max(ylim[1], np.max(signal))
+
         for ax, (ax_name, signal), (style_name, style) in zip(
             axes, self.axes.items(), self.axes_styles.items()
         ):
@@ -91,6 +97,7 @@ class SeqDiagram:
 
             ax.axes.get_yaxis().set_visible(False)
             ax.axes.set_xlim(self.t[0], self.t[len(self.t) - 1])
+            ax.axes.set_ylim(ylim[0], ylim[1])
 
             ax.axes.arrow(
                 0,
@@ -105,8 +112,8 @@ class SeqDiagram:
             )
 
             # labels
-            cur_ylim = ax.axes.set_ylim()
-            cur_xlim = ax.axes.set_xlim()
+            cur_ylim = ax.axes.get_ylim()
+            cur_xlim = ax.axes.get_xlim()
             ax.text(
                 self.t[len(self.t) - 1] + np.abs(cur_xlim[0] - cur_xlim[1]) * 0.01,
                 -np.abs(cur_ylim[0] - cur_ylim[1]) * 0.05,
