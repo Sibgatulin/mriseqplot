@@ -5,23 +5,25 @@ from mriseqplot.shapes import rf_sinc
 from mriseqplot.style import SeqStyle
 
 # define the time axis
-t = np.linspace(-0.2, 6, 10000)[:, None]
+t = np.linspace(-0.2, 4.5, 10000)[:, None]
 
 # create sequence diagram object
-sequence = SeqDiagram(
-    t, ["RF/ADC", "Slice Selection", "Phase Encoding", "Frequency Encoding"]
-)
+sequence = SeqDiagram(t, ["RF/ADC", "Slice", "Phase", "Frequency"])
 
 # set custom style for phase encoding and slice selection
 style_ph = SeqStyle()
 style_ph.color = [0.7, 0, 0]
 style_ph.color_fill = [0.7, 0, 0, 0.2]
-sequence.axes_styles["Phase Encoding"] = style_ph
+sequence.axes_styles["Phase"] = style_ph
+sequence.axes_names["Phase"] = "Phase\nEncoding"
 
 style_ss = SeqStyle()
 style_ss.color = [0.0, 0, 0.7]
 style_ss.color_fill = [0.0, 0, 0.7, 0.2]
-sequence.axes_styles["Slice Selection"] = style_ss
+sequence.axes_styles["Slice"] = style_ss
+sequence.axes_names["Slice"] = "Slice\nSelection"
+
+sequence.axes_names["Frequency"] = "Frequency\nEncoding"
 
 style_rf = SeqStyle()
 style_rf.color_fill = [0.2, 0.7, 0.2, 0.4]
@@ -32,7 +34,7 @@ sequence.add_element(
 )
 
 sequence.add_element(
-    "Phase Encoding",
+    "Phase",
     trapezoid,
     # some broadcasting magic for stacked gradients
     ampl=np.array(np.linspace(-1, 1, 10))[None, :],
@@ -42,26 +44,14 @@ sequence.add_element(
 )
 
 sequence.add_element(
-    "Frequency Encoding",
-    trapezoid,
-    ampl=-1,
-    t_start=1.2,
-    t_flat_out=1.4,
-    t_ramp_down=1.8,
+    "Frequency", trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8,
 )
 sequence.add_element(
-    "Frequency Encoding",
-    trapezoid,
-    ampl=0.5,
-    t_start=2,
-    t_flat_out=2.2,
-    t_ramp_down=3.8,
+    "Frequency", trapezoid, ampl=0.5, t_start=2, t_flat_out=2.2, t_ramp_down=3.8,
 )
 
+sequence.add_element("Slice", trapezoid, t_start=0, t_flat_out=0.2, t_ramp_down=1)
 sequence.add_element(
-    "Slice Selection", trapezoid, t_start=0, t_flat_out=0.2, t_ramp_down=1
-)
-sequence.add_element(
-    "Slice Selection", trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8
+    "Slice", trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8
 )
 sequence.plot_scheme()

@@ -21,10 +21,12 @@ class SeqDiagram:
         """
         self.t = t
         self.axes = {}
+        self.axes_names = {}
         self.axes_styles = {}
         for axis in axes:
             self.axes[axis] = np.zeros_like(t)
             self.axes_styles[axis] = SeqStyle()
+            self.axes_names[axis] = axis
 
     def add_element(self, axis_name: str, callback: Callable, ampl=1, **kwargs):
         """ Generic function to add an element to a waveform
@@ -63,8 +65,8 @@ class SeqDiagram:
             ylim[0] = min(ylim[0], np.min(signal))
             ylim[1] = max(ylim[1], np.max(signal))
 
-        for ax, (ax_name, signal), (style_name, style) in zip(
-            axes, self.axes.items(), self.axes_styles.items()
+        for ax, (ax_key, signal), (ax_key, style), (ax_key, ax_name) in zip(
+            axes, self.axes.items(), self.axes_styles.items(), self.axes_names.items()
         ):
             # plotting of the data
             signal_dims = signal.shape
@@ -123,6 +125,15 @@ class SeqDiagram:
                 -np.abs(cur_ylim[0] - cur_ylim[1]) * 0.05,
                 "t",
                 verticalalignment="top",
+                fontsize=style.font_size,
+            )
+            ax.text(
+                self.t[0],
+                0,
+                ax_name,
+                verticalalignment="center",
+                horizontalalignment="right",
+                multialignment="center",
                 fontsize=style.font_size,
             )
 
