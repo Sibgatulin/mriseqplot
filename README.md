@@ -4,6 +4,25 @@
 It's early days for the project and its main mission now is to provide a simple API
 to generate neat tweakable sequence diagrams.
 
+## Logic
+
+In a nutshell, ``mriseqplot`` allows you to map a sequence of events to a figure
+with a desired number of axes.
+
+``Sequence`` class represents an MRI sequence as a combination of  logical channels,
+or sequence of events, played out by the scanner.
+For example, a sequence of RF pulses might be combined together into one "channel",
+while a sequence of readout gradients can be combined into another "channel".
+Every channel is represented as a single ``numpy`` array with 1 or 2 dimensions,
+with one axis representing time, and another potentially allowing to stack multiple
+events on top of each other (e.g. to represent all phase encoding gradients at once).
+
+Next, the sequence of these channels must be mapped onto a figure. By default, each
+logical channel represented by ``Sequence`` receives its own axis, however
+``mriseqplot`` allows to map a number of channels to one (e.g. to represent RF and ADC
+on one axis).
+
+
 ## Installing ``mriseqplot``
 
 ``mriseqplot`` is not yet on PyPI, neither it is available through anaconda. To install the module, clone the repository from GitHub
