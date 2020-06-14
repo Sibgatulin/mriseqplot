@@ -88,6 +88,7 @@ class Sequence:
                 0,
                 head_width=0.15,
                 head_length=0.1,
+                fc="k",
                 clip_on=False,
             )
         return axes
