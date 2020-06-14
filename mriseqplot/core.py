@@ -79,7 +79,11 @@ class SeqDiagram:
 
                 ax.fill_between(plt_time, plt_signal, color=style.color_fill)
                 ax.plot(
-                    plt_time, plt_signal, color=style.color, linewidth=style.width,
+                    plt_time,
+                    plt_signal,
+                    color=style.color,
+                    linewidth=style.width,
+                    clip_on=False,
                 )
 
             # axis formatting
