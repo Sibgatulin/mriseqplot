@@ -57,9 +57,6 @@ class SeqDiagram:
         if len(self.axes) == 1:  # a little ugly workaround
             axes = [axes]
 
-        print(axes)
-        print(self.axes.items())
-        print(self.axes_styles.items())
         for ax, (ax_name, signal), (style_name, style) in zip(
             axes, self.axes.items(), self.axes_styles.items()
         ):
