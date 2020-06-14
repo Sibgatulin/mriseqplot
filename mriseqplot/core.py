@@ -60,13 +60,16 @@ class SeqDiagram:
             axes = [axes]
 
         # set consistent y-limit as maximum from all plots
-        ylim = np.array([0.0, 0.0])
-        for (ax_name, signal) in self.axes.items():
+        ylim = [0.0, 0.0]
+        for signal in self.axes.values():
             ylim[0] = min(ylim[0], np.min(signal))
             ylim[1] = max(ylim[1], np.max(signal))
 
-        for ax, (ax_key, signal), (ax_key, style), (ax_key, ax_name) in zip(
-            axes, self.axes.items(), self.axes_styles.items(), self.axes_names.items()
+        for ax, signal, style, ax_name in zip(
+            axes,
+            self.axes.values(),
+            self.axes_styles.values(),
+            self.axes_names.values(),
         ):
             # plotting of the data
             signal_dims = signal.shape
@@ -89,10 +92,20 @@ class SeqDiagram:
                 )
 
             # axis formatting
+            ax.set_yticks([])
+            ax.set_ylabel(
+                ax_name,
+                fontsize=style.font_size,
+                rotation=0,
+                verticalalignment="center",
+                horizontalalignment="right",
+                multialignment="center",
+            )
             if not style.axes_ticks:
-                ax.set_xticks([], [])
-            ax.set_ylabel(ax_name)
-            ax.set_xlabel("")
+                ax.set_xticks([])
+            ax.set_xlabel("t", fontsize=style.font_size)
+            ax.xaxis.set_label_coords(1.02, 0.4)
+
             for side in ["left", "top", "right"]:
                 ax.spines[side].set_visible(False)
             ax.spines["bottom"].set_position("zero")
@@ -101,40 +114,19 @@ class SeqDiagram:
                 ax.spines[side].set_linewidth(style.axes_width)
                 ax.spines[side].set_color(style.axes_color)
 
-            ax.axes.get_yaxis().set_visible(False)
-            ax.axes.set_xlim(self.t[0], self.t[len(self.t) - 1])
+            ax.axes.set_xlim(self.t[0], self.t[-1])
             ax.axes.set_ylim(ylim[0], ylim[1])
 
             ax.axes.arrow(
                 0,
                 0,
-                np.squeeze(self.t[len(self.t) - 1]),
+                np.squeeze(self.t[-1]),
                 0,
                 head_width=0.15,
                 head_length=0.1,
                 fc=style.axes_color,
                 ec=style.axes_color,
                 clip_on=False,
-            )
-
-            # labels
-            cur_ylim = ax.axes.get_ylim()
-            cur_xlim = ax.axes.get_xlim()
-            ax.text(
-                self.t[len(self.t) - 1] + np.abs(cur_xlim[0] - cur_xlim[1]) * 0.01,
-                -np.abs(cur_ylim[0] - cur_ylim[1]) * 0.05,
-                "t",
-                verticalalignment="top",
-                fontsize=style.font_size,
-            )
-            ax.text(
-                self.t[0],
-                0,
-                ax_name,
-                verticalalignment="center",
-                horizontalalignment="right",
-                multialignment="center",
-                fontsize=style.font_size,
             )
 
         plt.show()
