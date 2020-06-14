@@ -1,6 +1,15 @@
 import numpy as np
 
 
+def rf_sinc(t, t_start, duration, side_lobes):
+    y = np.zeros_like(t)
+    idx_rf = (t > t_start) & (t < t_start + duration)
+    t_rf = t[idx_rf] - t_start - duration / 2
+    y[idx_rf] = np.sin(t_rf / duration * 2 * np.pi * (side_lobes + 1)) / t_rf
+    y[idx_rf] = y[idx_rf] / np.max(y[idx_rf])
+    return y
+
+
 def trapezoid(t, t_start, t_flat_out, t_ramp_down):
     """ A symmetrical trapezoid of unit height
     Parameters
