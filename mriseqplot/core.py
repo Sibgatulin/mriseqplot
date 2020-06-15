@@ -5,14 +5,14 @@ from mriseqplot.style import SeqStyle
 from typing import Callable, List
 
 
-class SeqDiagram:
-    def __init__(self, t, axes: List[str]):
+class Sequence:
+    def __init__(self, t, channels: List[str]):
         """ Initialize sequence diagram
         Parameters
         ----------
         t : np.array, 1D
             Sets the grid for all waveforms to be computed on
-        axes : list of strings
+        channels : list of strings
             Names of the individual lines of the diagram. Example:
             ["RF", "PEG", "FEG", "SSG"]. As of now the order defines the order in which
             the lines will appear on the plot.
@@ -20,19 +20,19 @@ class SeqDiagram:
         initialization all waveforms set to zero-filled arrays the same length as t.
         """
         self.t = t
-        self.axes = {}
+        self.channels = {}
         self.axes_names = {}
         self.axes_styles = {}
-        for axis in axes:
-            self.axes[axis] = np.zeros_like(t)
-            self.axes_styles[axis] = SeqStyle()
-            self.axes_names[axis] = axis
+        for channel in channels:
+            self.channels[channel] = np.zeros_like(t)
+            self.axes_styles[channel] = SeqStyle()
+            self.axes_names[channel] = channel
 
-    def add_element(self, axis_name: str, callback: Callable, ampl=1, **kwargs):
+    def add_element(self, channel_name: str, callback: Callable, ampl=1, **kwargs):
         """ Generic function to add an element to a waveform
         Parameters
         ----------
-        axis_name : str
+        channel_name : str
             Name of the axis to add an element to. Will raise a KeyError if the name
             was not given upon initialization
         callback : callable
@@ -47,21 +47,19 @@ class SeqDiagram:
         chosen axis and issues a warning if it does
         """
         unit = ampl * callback(self.t, **kwargs)
-        overlap = np.logical_and(self.axes[axis_name], unit)
+        overlap = np.logical_and(self.channels[channel_name], unit)
         if overlap.any():
-            warnings.warn(f"Got an overlap in {axis_name} using {callback.__name__}")
-        self.axes[axis_name] = self.axes[axis_name] + unit
+            warnings.warn(f"Got an overlap in {channel_name} using {callback.__name__}")
+        self.channels[channel_name] = self.channels[channel_name] + unit
 
-    def _format_axes(self, axes):
+    def _format_axes(self, axes, labels):
         # set consistent y-limit as maximum from all plots
         ylim = [0.0, 0.0]
-        for signal in self.axes.values():
+        for signal in self.channels.values():
             ylim[0] = min(ylim[0], np.min(signal))
             ylim[1] = max(ylim[1], np.max(signal))
 
-        for ax, style, ax_name in zip(
-            axes, self.axes_styles.values(), self.axes_names.values(),
-        ):
+        for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels,):
             ax.set_yticks([])
             ax.set_ylabel(
                 ax_name,
@@ -100,36 +98,61 @@ class SeqDiagram:
             )
         return axes
 
-    def plot_scheme(self):
-        """ Plot the sequence diagram """
-        fig, axes = plt.subplots(nrows=len(self.axes), sharex=True, sharey=True)
+    def _plot_channel(self, ax, signal, style):
+        # plotting of the data
+        signal_dims = signal.shape
+        for dim in range(signal_dims[1]):
+            plt_time = self.t
+            plt_signal = signal[:, dim]
 
-        if len(self.axes) == 1:  # a little ugly workaround
+            # remove all points where it hits zero to avoid drawing on the axis
+            remove_ind = np.where(plt_signal == 0)
+            plt_signal = np.delete(plt_signal, remove_ind)
+            plt_time = np.delete(plt_time, remove_ind)
+
+            ax.fill_between(plt_time, plt_signal, color=style.color_fill)
+            ax.plot(
+                plt_time,
+                plt_signal,
+                color=style.color,
+                linewidth=style.width,
+                clip_on=False,
+            )
+        return ax
+
+    def plot_scheme(self, ax2channel=None):
+        """ Plot the sequence diagram
+
+        Parameters
+        ----------
+        ax2channel : iterable, optional
+            Mapping from subplot / axes labels to channels.
+            If not given, every channel will be plotted in its own subplot and channel
+            name will be used as subplots's ylabel.
+        """
+        if ax2channel is None:
+            # trivial map
+            ax2channel = {name: name for name in self.channels.keys()}
+
+        fig, axes = plt.subplots(nrows=len(ax2channel), sharex=True, sharey=True)
+
+        if len(self.channels) == 1:  # a little ugly workaround
             axes = [axes]
 
-        axes = self._format_axes(axes)
+        axes = self._format_axes(axes, ax2channel.keys())
 
-        for ax, signal, style in zip(
-            axes, self.axes.values(), self.axes_styles.values(),
-        ):
-            # plotting of the data
-            signal_dims = signal.shape
-            for dim in range(signal_dims[1]):
-                plt_time = self.t
-                plt_signal = signal[:, dim]
-
-                # remove all points where it hits zero to avoid drawing on the axis
-                remove_ind = np.where(plt_signal == 0)
-                plt_signal = np.delete(plt_signal, remove_ind)
-                plt_time = np.delete(plt_time, remove_ind)
-
-                ax.fill_between(plt_time, plt_signal, color=style.color_fill)
-                ax.plot(
-                    plt_time,
-                    plt_signal,
-                    color=style.color,
-                    linewidth=style.width,
-                    clip_on=False,
+        for ax, (label, channels) in zip(axes, ax2channel.items()):
+            # only one channel for this axis
+            if isinstance(channels, str):
+                name_channel = channels
+                self._plot_channel(
+                    ax, self.channels[name_channel], self.axes_styles[name_channel]
                 )
+            # this axis represents a number of channels
+            elif isinstance(channels, (list, tuple)):
+                for name_channel in channels:
+                    self._plot_channel(
+                        ax, self.channels[name_channel], self.axes_styles[name_channel]
+                    )
 
         plt.show()
