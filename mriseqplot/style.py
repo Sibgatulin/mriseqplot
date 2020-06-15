@@ -10,3 +10,4 @@ class SeqStyle:
         self.color_fill = (0.5, 0.5, 0.5, 0.2)
         self.width = 2
         self.font_size = 20
+        self.zorder = 1

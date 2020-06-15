@@ -14,6 +14,7 @@ sequence = Sequence(t, ["RF", "ADC", "Slice", "Phase", "Frequency"])
 style_ph = SeqStyle()
 style_ph.color = [0.7, 0, 0]
 style_ph.color_fill = [0.7, 0, 0, 0.2]
+style_ph.zorder = 10
 sequence.axes_styles["Phase"] = style_ph
 
 style_ss = SeqStyle()
@@ -22,8 +23,13 @@ style_ss.color_fill = [0.0, 0, 0.7, 0.2]
 sequence.axes_styles["Slice"] = style_ss
 
 style_rf = SeqStyle()
-style_rf.color_fill = [0.2, 0.7, 0.2, 0.4]
+style_rf.color_fill = [0.6, 0.8, 0.6, 1.0]
+style_rf.zorder = 10
 sequence.axes_styles["RF"] = style_rf
+
+style_adc = SeqStyle()
+style_adc.color_fill = [0.9, 0.9, 0.6, 1.0]
+sequence.axes_styles["ADC"] = style_adc
 
 sequence.add_element(
     "RF", rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2,
@@ -32,7 +38,7 @@ sequence.add_element(
     "ADC",
     trapezoid,
     # temp solution until we introduce proper box shape
-    ampl=np.array([-0.5, 0.5])[None, :],
+    ampl=np.array([0, 1])[None, :],
     t_start=2.2,
     t_flat_out=2.2,
     t_ramp_down=3.8,

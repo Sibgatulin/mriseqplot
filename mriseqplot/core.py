@@ -110,13 +110,23 @@ class Sequence:
             plt_signal = np.delete(plt_signal, remove_ind)
             plt_time = np.delete(plt_time, remove_ind)
 
-            ax.fill_between(plt_time, plt_signal, color=style.color_fill)
+            ax.fill_between(
+                plt_time,
+                plt_signal,
+                0,
+                color=style.color_fill,
+                edgecolor=[1, 0, 0, 1],
+                linewidth=style.axes_width + style.axes_width * 0.2,
+                zorder=style.zorder,
+                clip_on=False,
+            )
             ax.plot(
                 plt_time,
                 plt_signal,
                 color=style.color,
                 linewidth=style.width,
                 clip_on=False,
+                zorder=style.zorder + 10,
             )
         return ax
 
