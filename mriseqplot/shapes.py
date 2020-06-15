@@ -17,7 +17,6 @@ def adc(t, t_start, duration):
     y[idx_rf] = 1
     y[idx_rf[0]] = np.finfo(np.float32).eps  # edges down to zero
     y[idx_rf[-1]] = np.finfo(np.float32).eps  # edges down to zero
-    print(idx_rf)
     return y
 
 
