@@ -122,19 +122,20 @@ class Sequence:
                 plt_time,
                 plt_signal,
                 0,
-                color=style.color_fill,
-                edgecolor=[1, 0, 0, 1],
-                linewidth=style.axes_width + style.axes_width * 0.5,
-                zorder=style.zorder,
+                facecolor=style.color_fill,
+                edgecolor=style.color_fill,
+                linewidth=style.axes_width + style.axes_width * 0,
+                zorder=style.zorder + 5,
                 clip_on=False,
             )
+
             ax.plot(
                 plt_time,
                 plt_signal,
                 color=style.color,
                 linewidth=style.width,
                 clip_on=False,
-                zorder=style.zorder + 10,
+                zorder=style.zorder + 10,  # always on top of fill
             )
         return ax
 
