@@ -106,7 +106,15 @@ class Sequence:
             plt_signal = signal[:, dim]
 
             # remove all points where it hits zero to avoid drawing on the axis
-            remove_ind = np.where(plt_signal == 0)
+            remove_ind = np.argwhere(plt_signal == 0)
+            edges_left = np.argwhere(np.diff(remove_ind, axis=0) > 1)
+            edges_left = edges_left[:, 0]  # keep the left edge at zero
+            edges_right = edges_left + 1  # keep the right edge at zero
+            remove_ind = np.delete(
+                remove_ind, np.concatenate((edges_left, edges_right))
+            )
+            # TODO: probably needs checking if remove_ind is within bounds
+            # or just removal of all indices out of bounds
             plt_signal = np.delete(plt_signal, remove_ind)
             plt_time = np.delete(plt_time, remove_ind)
 
