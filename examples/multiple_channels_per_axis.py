@@ -5,6 +5,8 @@ from mriseqplot.shapes import rf_sinc
 from mriseqplot.shapes import adc
 from mriseqplot.style import SeqStyle
 
+useColors = False
+
 # define the time axis
 t = np.linspace(-0.2, 4.5, 10000)[:, None]
 
@@ -12,25 +14,36 @@ t = np.linspace(-0.2, 4.5, 10000)[:, None]
 sequence = Sequence(t, ["RF", "ADC", "Slice", "Phase", "Frequency"])
 
 # set custom style for phase encoding and slice selection
-style_ph = SeqStyle()
-style_ph.color = [0.7, 0, 0]
-style_ph.color_fill = [0.7, 0, 0, 0.2]
-style_ph.zorder = 10
-sequence.axes_styles["Phase"] = style_ph
+if useColors:
+    style_ph = SeqStyle()
+    style_ph.color = [0.7, 0, 0]
+    style_ph.color_fill = [0.7, 0, 0, 0.2]
+    style_ph.zorder = 10
+    sequence.axes_styles["Phase"] = style_ph
 
-style_ss = SeqStyle()
-style_ss.color = [0.0, 0, 0.7]
-style_ss.color_fill = [0.0, 0, 0.7, 0.2]
-sequence.axes_styles["Slice"] = style_ss
+    style_ss = SeqStyle()
+    style_ss.color = [0.0, 0, 0.7]
+    style_ss.color_fill = [0.0, 0, 0.7, 0.2]
+    sequence.axes_styles["Slice"] = style_ss
 
-style_rf = SeqStyle()
-style_rf.color_fill = [0.6, 0.8, 0.6, 1.0]
-style_rf.zorder = 10
-sequence.axes_styles["RF"] = style_rf
+    style_rf = SeqStyle()
+    style_rf.color_fill = [0.6, 0.8, 0.6, 1.0]
+    style_rf.zorder = 10
+    sequence.axes_styles["RF"] = style_rf
 
-style_adc = SeqStyle()
-style_adc.color_fill = [0.9, 0.9, 0.6, 1.0]
-sequence.axes_styles["ADC"] = style_adc
+    style_adc = SeqStyle()
+    style_adc.color_fill = [0.9, 0.9, 0.6, 1.0]
+    sequence.axes_styles["ADC"] = style_adc
+else:
+    style_clear = SeqStyle()
+    style_clear.color = [0.0, 0, 0]
+    style_clear.color_fill = [1.0, 1.0, 1.0, 1.0]
+    style_clear.zorder = 10
+    sequence.axes_styles["Frequency"] = style_clear
+    sequence.axes_styles["Phase"] = style_clear
+    sequence.axes_styles["Slice"] = style_clear
+    sequence.axes_styles["RF"] = style_clear
+    sequence.axes_styles["ADC"] = style_clear
 
 sequence.add_element(
     "RF", rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2,

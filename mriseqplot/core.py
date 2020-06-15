@@ -116,7 +116,7 @@ class Sequence:
                 0,
                 color=style.color_fill,
                 edgecolor=[1, 0, 0, 1],
-                linewidth=style.axes_width + style.axes_width * 0.25,
+                linewidth=style.axes_width + style.axes_width * 0.5,
                 zorder=style.zorder,
                 clip_on=False,
             )
