@@ -2,6 +2,7 @@ import numpy as np
 from mriseqplot.core import Sequence
 from mriseqplot.shapes import trapezoid
 from mriseqplot.shapes import rf_sinc
+from mriseqplot.shapes import adc
 from mriseqplot.style import SeqStyle
 
 # define the time axis
@@ -35,13 +36,7 @@ sequence.add_element(
     "RF", rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2,
 )
 sequence.add_element(
-    "ADC",
-    trapezoid,
-    # temp solution until we introduce proper box shape
-    ampl=np.array([0, 1])[None, :],
-    t_start=2.2,
-    t_flat_out=2.2,
-    t_ramp_down=3.8,
+    "ADC", adc, ampl=1, t_start=2.2, duration=1.6,
 )
 
 sequence.add_element(

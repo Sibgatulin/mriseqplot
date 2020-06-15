@@ -10,6 +10,17 @@ def rf_sinc(t, t_start, duration, side_lobes):
     return y
 
 
+def adc(t, t_start, duration):
+    y = np.zeros_like(t)
+    idx_rf = np.argwhere((t > t_start) & (t < t_start + duration))
+    idx_rf = idx_rf[:, 0]
+    y[idx_rf] = 1
+    y[idx_rf[0]] = np.finfo(np.float32).eps  # edges down to zero
+    y[idx_rf[-1]] = np.finfo(np.float32).eps  # edges down to zero
+    print(idx_rf)
+    return y
+
+
 def trapezoid(t, t_start, t_flat_out, t_ramp_down):
     """ A symmetrical trapezoid of unit height
     Parameters
