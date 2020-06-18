@@ -5,6 +5,7 @@ class SeqStyle:
         self.axes_width = 2
         self.axes_color = (0, 0, 0)
         self.axes_ticks = False
+        self.axes_overlayed = True
 
         self.color = (0, 0, 0)
         self.color_fill = (0.5, 0.5, 0.5, 0.2)

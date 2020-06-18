@@ -74,7 +74,7 @@ class Sequence:
             ax.set_xlabel("t", fontsize=style.font_size)
             ax.xaxis.set_label_coords(1.02, 0.4)
 
-            for side in ["left", "top", "right"]:
+            for side in ["left", "top", "right", "bottom"]:
                 ax.spines[side].set_visible(False)
             ax.spines["bottom"].set_position("zero")
 
@@ -86,12 +86,13 @@ class Sequence:
             ax.axes.set_ylim(ylim[0], ylim[1])
 
             ax.axes.arrow(
-                0,
-                0,
                 np.squeeze(self.t[-1]),
+                0,
+                0.00000001,
                 0,
                 head_width=0.15,
                 head_length=0.1,
+                lw=style.axes_width,
                 fc=style.axes_color,
                 ec=style.axes_color,
                 clip_on=False,
@@ -123,7 +124,7 @@ class Sequence:
                 plt_signal,
                 0,
                 facecolor=style.color_fill,
-                edgecolor=style.color_fill,
+                edgecolor=[0, 0, 0, 0],
                 linewidth=style.axes_width + style.axes_width * 0,
                 zorder=style.zorder + 5,
                 clip_on=False,
@@ -174,4 +175,43 @@ class Sequence:
                         ax, self.channels[name_channel], self.axes_styles[name_channel]
                     )
 
+            style = self.axes_styles[name_channel]
+            if style.axes_overlayed:
+                # manually draw x-axes, first find the points where no data was drawn
+                axis_data = np.arange(0, len(self.t))
+                for line in ax.lines:
+                    x_data = line.get_xdata()
+                    ind = np.argwhere(x_data == self.t)
+                    ind = ind[:, 0]
+                    axis_data[ind[1:-1]] = -1
+
+                # cut into sections and draw step by step
+                sections = axis_data == -1
+                cur_section = np.array([], dtype=np.int64)
+                for iPoint in np.arange(0, len(self.t)):
+
+                    if not sections[iPoint]:
+                        cur_section = np.hstack([cur_section, axis_data[iPoint]])
+
+                    if ((sections[iPoint]) or (iPoint == len(self.t) - 1)) and (
+                        len(cur_section) > 0
+                    ):
+                        ax.plot(
+                            self.t[cur_section],
+                            np.zeros([len(cur_section), 1]),
+                            color=style.axes_color,
+                            linewidth=style.axes_width,
+                            clip_on=False,
+                            zorder=100,
+                        )
+                        cur_section = np.array([], dtype=np.int64)
+            else:
+                ax.plot(
+                    np.array([self.t[0], self.t[-1]]),
+                    np.array([0, 0]),
+                    color=style.axes_color,
+                    linewidth=style.axes_width,
+                    clip_on=False,
+                    zorder=100,
+                )
         plt.show()
