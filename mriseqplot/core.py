@@ -6,7 +6,7 @@ from typing import Callable, List
 
 
 class Sequence:
-    def __init__(self, t, channels: List[str]):
+    def __init__(self, t, channels: List[str], ax2channel=None):
         """ Initialize sequence diagram
         Parameters
         ----------
@@ -16,6 +16,12 @@ class Sequence:
             Names of the individual lines of the diagram. Example:
             ["RF", "PEG", "FEG", "SSG"]. As of now the order defines the order in which
             the lines will appear on the plot.
+        ax2channel : dict, optional
+            Defines the layout of the desired diagram.
+            Maps from subplots (axes) represented by their labels to channels.
+            If not given, every channel will be plotted in its own subplot and channel
+            name will be used as subplots's ylabel.
+
         Axes are represented as a dictionary with axes names being the keys. Upon
         initialization all waveforms set to zero-filled arrays the same length as t.
         """
@@ -29,6 +35,14 @@ class Sequence:
             self.axes_styles[channel] = SeqStyle()
             self.axes_names[channel] = channel
             self.anno[channel] = []
+
+        if ax2channel is None:
+            # trivial map
+            self.ax2channel = {name: [name] for name in channels}
+        else:  # convert single labels to iterables
+            self.ax2channel = {
+                k: [v] if isinstance(v, str) else v for k, v in ax2channel.items()
+            }
 
     def add_annotation(self, channel_name: str, t, ampl, **kwargs):
         text = kwargs.get("text", None)
@@ -237,46 +251,25 @@ class Sequence:
             )
         return ax
 
-    def plot_scheme(self, ax2channel=None):
-        """ Plot the sequence diagram
+    def plot_scheme(self):
+        """ Plot the sequence diagram """
+        fig, axes = plt.subplots(nrows=len(self.ax2channel), sharex=True, sharey=True)
 
-        Parameters
-        ----------
-        ax2channel : iterable, optional
-            Mapping from subplot / axes labels to channels.
-            If not given, every channel will be plotted in its own subplot and channel
-            name will be used as subplots's ylabel.
-        """
-        if ax2channel is None:
-            # trivial map
-            ax2channel = {name: name for name in self.channels.keys()}
-
-        fig, axes = plt.subplots(nrows=len(ax2channel), sharex=True, sharey=True)
-
+        # Following workaround might not make sense in the light of all changes,
+        # TODO: write a test
         if len(self.channels) == 1:  # a little ugly workaround
             axes = [axes]
 
-        axes = self._format_axes(axes, ax2channel.keys())
+        axes = self._format_axes(axes, self.ax2channel.keys())
 
-        for ax, (label, channels) in zip(axes, ax2channel.items()):
-            # only one channel for this axis
-            if isinstance(channels, str):
-                name_channel = channels
+        for ax, (label, channels) in zip(axes, self.ax2channel.items()):
+            for name_channel in channels:
                 self._plot_channel(
                     ax, self.channels[name_channel], self.axes_styles[name_channel]
                 )
                 self._plot_annotations(
                     ax, self.anno[name_channel], self.axes_styles[name_channel]
                 )
-            # this axis represents a number of channels
-            elif isinstance(channels, (list, tuple)):
-                for name_channel in channels:
-                    self._plot_channel(
-                        ax, self.channels[name_channel], self.axes_styles[name_channel]
-                    )
-                    self._plot_annotations(
-                        ax, self.anno[name_channel], self.axes_styles[name_channel]
-                    )
 
             style = self.axes_styles[name_channel]
             if style.axes_overlayed:

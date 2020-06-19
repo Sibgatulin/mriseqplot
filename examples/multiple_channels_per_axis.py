@@ -11,7 +11,15 @@ useColors = False
 t = np.linspace(-0.2, 4.5, 10000)[:, None]
 
 # create sequence diagram object
-sequence = Sequence(t, ["RF", "ADC", "Slice", "Phase", "Frequency"])
+channels = ["RF", "ADC", "Slice", "Phase", "Frequency"]
+axes_map = {
+    "RF/ADC": ["RF", "ADC"],
+    "Phase\nEncoding": "Phase",
+    "Slice\nSelection": "Slice",
+    "Frequency\nEncoding": "Frequency",
+}
+
+sequence = Sequence(t, channels, axes_map)
 
 # set custom style for phase encoding and slice selection
 if useColors:
@@ -78,10 +86,4 @@ sequence.add_element(
     "Slice", trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8
 )
 
-axes_map = {
-    "RF/ADC": ["RF", "ADC"],
-    "Phase\nEncoding": "Phase",
-    "Slice\nSelection": "Slice",
-    "Frequency\nEncoding": "Frequency",
-}
-sequence.plot_scheme(axes_map)
+fig, axes = sequence.plot_scheme()
