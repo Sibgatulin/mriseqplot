@@ -63,12 +63,22 @@ class Sequence:
             warnings.warn(f"Got an overlap in {channel_name} using {callback.__name__}")
         self.channels[channel_name] = self.channels[channel_name] + unit
 
-    def _format_axes(self, axes, labels, padding_factor=1.1):
+    def _format_axes(self, axes, ax2channel, padding_factor=1.0):
+        labels = ax2channel.keys()
+        chan_axes = ax2channel.values()
+
         # set consistent y-limit as maximum from all plots
         ylim = [0.0, 0.0]
         for signal in self.channels.values():
             ylim[0] = min(ylim[0], padding_factor * np.min(signal))
             ylim[1] = max(ylim[1], padding_factor * np.max(signal))
+        for chan_anno in self.anno.values():
+            for anno in chan_anno:
+                ampl = anno["ampl"]
+                if isinstance(ampl, float):
+                    ampl = [ampl]  # make list
+                ylim[0] = min(ylim[0], min(ampl))
+                ylim[1] = max(ylim[1], max(ampl))
 
         for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels,):
             ax.set_yticks([])
@@ -110,7 +120,10 @@ class Sequence:
             )
         return axes
 
-    def _plot_annotations(self, ax, annotation, style):
+    def _plot_annotations(self, ax, name_channel):
+        annotation = self.anno[name_channel]
+        style = self.axes_styles[name_channel]
+
         for anno in annotation:
             t = anno["t"]
             ampl = anno["ampl"]
@@ -197,7 +210,10 @@ class Sequence:
                     zorder=draw_style.zorder + 50,
                 )
 
-    def _plot_channel(self, ax, signal, style):
+    def _plot_channel(self, ax, name_channel):
+        signal = self.channels[name_channel]
+        style = self.axes_styles[name_channel]
+
         # plotting of the data
         signal_dims = signal.shape
         for dim in range(signal_dims[1]):
@@ -257,27 +273,18 @@ class Sequence:
         if len(self.channels) == 1:  # a little ugly workaround
             axes = [axes]
 
-        axes = self._format_axes(axes, ax2channel.keys())
-
+        axes = self._format_axes(axes, ax2channel)
         for ax, (label, channels) in zip(axes, ax2channel.items()):
             # only one channel for this axis
             if isinstance(channels, str):
                 name_channel = channels
-                self._plot_channel(
-                    ax, self.channels[name_channel], self.axes_styles[name_channel]
-                )
-                self._plot_annotations(
-                    ax, self.anno[name_channel], self.axes_styles[name_channel]
-                )
+                self._plot_channel(ax, name_channel)
+                self._plot_annotations(ax, name_channel)
             # this axis represents a number of channels
             elif isinstance(channels, (list, tuple)):
                 for name_channel in channels:
-                    self._plot_channel(
-                        ax, self.channels[name_channel], self.axes_styles[name_channel]
-                    )
-                    self._plot_annotations(
-                        ax, self.anno[name_channel], self.axes_styles[name_channel]
-                    )
+                    self._plot_channel(ax, name_channel)
+                    self._plot_annotations(ax, name_channel)
 
             style = self.axes_styles[name_channel]
             if style.axes_overlayed:

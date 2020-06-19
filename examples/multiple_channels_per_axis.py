@@ -84,5 +84,6 @@ axes_map = {
     "Frequency\nEncoding": "Frequency",
 }
 fig, axes = sequence.plot_scheme(axes_map)
-sequence.add_vline(axes[[0, 1, 3]], t=3.0, linestyle=":", color="k", alpha=0.5)
+sequence.add_vline(axes[[0, 1, 2, 3]], t=3.0, linestyle=":", color="k", alpha=0.5)
+sequence.add_vline(axes[[0, 1, 2, 3]], t=0.6, linestyle=":", color="k", alpha=0.5)
 plt.show()
