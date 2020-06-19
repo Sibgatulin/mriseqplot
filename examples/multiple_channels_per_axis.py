@@ -48,9 +48,13 @@ else:
 sequence.add_element(
     "RF", rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2,
 )
+sequence.add_annotation("RF", 0.6, -0.6, text="90° Excitation Pulse")
+sequence.add_annotation("RF", [0.6, 3.0], [1.4, 1.4], text="Echo-Time (TE)", arrow=True)
+
 sequence.add_element(
     "ADC", adc, ampl=1, t_start=2.2, duration=1.6,
 )
+sequence.add_annotation("ADC", 3.0, 0.5, text="Data Sampling")
 
 sequence.add_element(
     "Phase",

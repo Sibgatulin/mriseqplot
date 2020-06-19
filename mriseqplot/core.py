@@ -20,6 +20,7 @@ class Sequence:
         initialization all waveforms set to zero-filled arrays the same length as t.
         """
         self.t = t
+        self.anno = {}
         self.channels = {}
         self.axes_names = {}
         self.axes_styles = {}
@@ -27,6 +28,15 @@ class Sequence:
             self.channels[channel] = np.zeros_like(t)
             self.axes_styles[channel] = SeqStyle()
             self.axes_names[channel] = channel
+            self.anno[channel] = []
+
+    def add_annotation(self, channel_name: str, t, ampl, **kwargs):
+        text = kwargs.get("text", None)
+        arrow = kwargs.get("arrow", None)
+        style = kwargs.get("style", None)
+
+        item = {"t": t, "ampl": ampl, "text": text, "arrow": arrow, "style": style}
+        self.anno[channel_name].append(item)
 
     def add_element(self, channel_name: str, callback: Callable, ampl=1, **kwargs):
         """ Generic function to add an element to a waveform
@@ -91,13 +101,100 @@ class Sequence:
                 0.00000001,
                 0,
                 head_width=0.15,
-                head_length=0.1,
+                head_length=style.arrow_length,
                 lw=style.axes_width,
                 fc=style.axes_color,
                 ec=style.axes_color,
                 clip_on=False,
             )
         return axes
+
+    def _plot_annotations(self, ax, annotation, style):
+        for anno in annotation:
+            t = anno["t"]
+            ampl = anno["ampl"]
+
+            # get style
+            draw_style = style
+            if anno["style"] is not None:
+                draw_style = anno["style"]  # use channel style
+
+            # draw lines
+            text_alignment = "center"
+            if (not isinstance(t, float) and len(t) > 1) and (
+                not isinstance(ampl, float) and len(ampl) > 1
+            ):
+                has_arrow = anno["arrow"] is not None and anno["arrow"]
+                line_t = t
+                if has_arrow:
+                    line_t[0] += draw_style.arrow_length
+                    line_t[1] -= draw_style.arrow_length
+
+                ax.plot(
+                    line_t,
+                    ampl,
+                    color=draw_style.color,
+                    linewidth=draw_style.width,
+                    clip_on=False,
+                    zorder=draw_style.zorder + 40,
+                )
+                text_alignment = "bottom"
+
+                if has_arrow:
+                    # left arrow
+                    ax.axes.arrow(
+                        line_t[0],
+                        ampl[0],
+                        -(line_t[-1] - line_t[0]) * 0.000001,
+                        -(ampl[-1] - ampl[0]) * 0.0001,
+                        head_width=0.15,
+                        head_length=draw_style.arrow_length,
+                        lw=draw_style.axes_width,
+                        fc=draw_style.axes_color,
+                        ec=draw_style.axes_color,
+                        clip_on=False,
+                    )
+
+                    # right arrow
+                    ax.axes.arrow(
+                        line_t[-1],
+                        ampl[-1],
+                        (line_t[-1] - line_t[0]) * 0.000001,
+                        (ampl[-1] - ampl[0]) * 0.0001,
+                        head_width=0.15,
+                        head_length=draw_style.arrow_length,
+                        lw=draw_style.axes_width,
+                        fc=draw_style.axes_color,
+                        ec=draw_style.axes_color,
+                        clip_on=False,
+                    )
+
+            # draw text
+            if anno["text"] is not None:
+                textPos = [0, 0]
+                # get text x-position
+                if not isinstance(t, float) and len(t) > 1:
+                    textPos[0] = t[0] + (t[-1] - t[0]) / 2
+                else:
+                    textPos[0] = t
+
+                # get text y-position
+                if not isinstance(ampl, float) and len(ampl) > 1:
+                    textPos[1] = ampl[0] + (ampl[-1] - ampl[0]) / 2
+                else:
+                    textPos[1] = ampl
+
+                # draw text
+                ax.text(
+                    textPos[0],
+                    textPos[1],
+                    anno["text"],
+                    horizontalalignment="center",
+                    verticalalignment=text_alignment,
+                    fontsize=draw_style.font_size,
+                    color=draw_style.font_color,
+                    zorder=draw_style.zorder + 50,
+                )
 
     def _plot_channel(self, ax, signal, style):
         # plotting of the data
@@ -168,11 +265,17 @@ class Sequence:
                 self._plot_channel(
                     ax, self.channels[name_channel], self.axes_styles[name_channel]
                 )
+                self._plot_annotations(
+                    ax, self.anno[name_channel], self.axes_styles[name_channel]
+                )
             # this axis represents a number of channels
             elif isinstance(channels, (list, tuple)):
                 for name_channel in channels:
                     self._plot_channel(
                         ax, self.channels[name_channel], self.axes_styles[name_channel]
+                    )
+                    self._plot_annotations(
+                        ax, self.anno[name_channel], self.axes_styles[name_channel]
                     )
 
             style = self.axes_styles[name_channel]
