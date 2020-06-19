@@ -1,6 +1,7 @@
 import warnings
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.transforms as transforms
 from mriseqplot.style import SeqStyle
 from typing import Callable, List
 
@@ -62,12 +63,12 @@ class Sequence:
             warnings.warn(f"Got an overlap in {channel_name} using {callback.__name__}")
         self.channels[channel_name] = self.channels[channel_name] + unit
 
-    def _format_axes(self, axes, labels):
+    def _format_axes(self, axes, labels, padding_factor=1.1):
         # set consistent y-limit as maximum from all plots
         ylim = [0.0, 0.0]
         for signal in self.channels.values():
-            ylim[0] = min(ylim[0], np.min(signal))
-            ylim[1] = max(ylim[1], np.max(signal))
+            ylim[0] = min(ylim[0], padding_factor * np.min(signal))
+            ylim[1] = max(ylim[1], padding_factor * np.max(signal))
 
         for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels,):
             ax.set_yticks([])
@@ -317,4 +318,30 @@ class Sequence:
                     clip_on=False,
                     zorder=100,
                 )
-        plt.show()
+        # transAxes is easier to use when axes do not have arbitrary offset between
+        plt.subplots_adjust(hspace=0)
+        return fig, axes
+
+    def add_vline(self, axes_to_span, t, **kwargs):
+        """ Add vertical lines to specified axes
+
+        Unlike many (all) other ``add_`` methods, this method operates on axes
+        (i.e. subplots), which justifies it acting on all axes at once, rather than
+        adding individual vertical plots to each channel, as elements are added.
+        As of now it expects actual axes to work on, rather than their labels
+        (which are defined as ax2channel keys)
+
+        Parameters
+        ----------
+        axes_to_span : iterable of matplotlib's axes
+            Axes to draw a vertical line over
+        t : float
+            Point in time where to add a line
+        **kwargs
+            Other optional arguments are passed to plt.Line2D constructor
+        """
+        fig = plt.gcf()
+        for ax in axes_to_span:
+            trans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
+            line = plt.Line2D([t, t], [0, 1], transform=trans, **kwargs)
+            fig.add_artist(line)

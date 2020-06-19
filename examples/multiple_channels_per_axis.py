@@ -1,9 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from mriseqplot.core import Sequence
-from mriseqplot.shapes import trapezoid
-from mriseqplot.shapes import rf_sinc
-from mriseqplot.shapes import adc
 from mriseqplot.style import SeqStyle
+from mriseqplot.shapes import adc, rf_sinc, trapezoid
 
 useColors = False
 
@@ -84,4 +83,6 @@ axes_map = {
     "Slice\nSelection": "Slice",
     "Frequency\nEncoding": "Frequency",
 }
-sequence.plot_scheme(axes_map)
+fig, axes = sequence.plot_scheme(axes_map)
+sequence.add_vline(axes[[0, 1, 3]], t=3.0, linestyle=":", color="k", alpha=0.5)
+plt.show()
