@@ -1,10 +1,17 @@
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from mriseqplot.core import Sequence
 from mriseqplot.style import SeqStyle
 from mriseqplot.shapes import adc, rf_sinc, trapezoid
 
-useColors = False
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--colors",
+    action="store_true",
+    help="Produce a coloured diagram as opposed to black and white one",
+)
+args = parser.parse_args()
 
 # define the time axis
 t = np.linspace(-0.2, 4.5, 10000)[:, None]
@@ -13,7 +20,7 @@ t = np.linspace(-0.2, 4.5, 10000)[:, None]
 sequence = Sequence(t, ["RF", "ADC", "Slice", "Phase", "Frequency"])
 
 # set custom style for phase encoding and slice selection
-if useColors:
+if args.colors:
     style_ph = SeqStyle()
     style_ph.color = [0.7, 0, 0]
     style_ph.color_fill = [0.7, 0, 0, 0.2]
@@ -84,6 +91,6 @@ axes_map = {
     "Frequency\nEncoding": "Frequency",
 }
 fig, axes = sequence.plot_scheme(axes_map)
-sequence.add_vline(axes[[0, 1, 2, 3]], t=3.0, linestyle=":", color="k", alpha=0.5)
-sequence.add_vline(axes[[0, 1, 2, 3]], t=0.6, linestyle=":", color="k", alpha=0.5)
+sequence.add_vline(axes, t=3.0, linestyle=":", color="k", alpha=0.5)
+sequence.add_vline(axes, t=0.6, linestyle=":", color="k", alpha=0.5)
 plt.show()
