@@ -63,7 +63,7 @@ class Sequence:
             warnings.warn(f"Got an overlap in {channel_name} using {callback.__name__}")
         self.channels[channel_name] = self.channels[channel_name] + unit
 
-    def _format_axes(self, axes, ax2channel, padding_factor=1.0):
+    def _format_axes(self, axes, ax2channel, padding_factor=1.1):
         labels = ax2channel.keys()
         chan_axes = ax2channel.values()
 
