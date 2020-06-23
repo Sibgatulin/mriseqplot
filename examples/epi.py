@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mriseqplot.core import Sequence
-from mriseqplot.style import SeqStyle
 from mriseqplot.shapes import adc, rf_sinc, trapezoid
 
 t = np.linspace(-0.2, 20, 10000)[:, None]
