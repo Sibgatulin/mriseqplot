@@ -1,10 +1,11 @@
 import warnings
+import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 from mriseqplot.style import SeqStyle
 from typing import Callable, List
-from mriseqplot.plot import _format_axes_base
+from mriseqplot.plot import _format_axes_base, _project_channel_on_dime_axis, rcParams
 
 
 class Sequence:
@@ -95,11 +96,26 @@ class Sequence:
                 horizontalalignment="right",
                 multialignment="center",
             )
-
-            # don't understand why keeping the default leaves blank space before arrow
-            # and messes with the label position... 🤔
-            ax.set_xlim(self.t[0], self.t[-1])
-            ax.set_ylim(ylim[0], ylim[1])
+        for ax, channel_names in zip(axes, chan_axes):
+            if isinstance(channel_names, str):
+                channels = [self.channels[channel_names]]
+            else:
+                channels = [self.channels[k] for k in channel_names]
+            axis = _project_channel_on_dime_axis(channels)
+            ax.plot(
+                self.t, axis, lw=style.axes_width, color=style.axes_color,
+            )
+            ax.arrow(
+                x=self.t[-1],
+                y=0.0,
+                dx=np.finfo(float).eps,  # must be smth
+                dy=0,
+                head_width=rcParams["arrow_width"],  # data coords
+                head_length=rcParams["arrow_length"],  # axes coords
+                fc=mpl.rcParams["axes.edgecolor"],
+                ec=mpl.rcParams["axes.edgecolor"],
+                clip_on=False,
+            )
 
         return axes
 
@@ -125,19 +141,6 @@ class Sequence:
         for dim in range(signal_dims[1]):
             plt_time = self.t
             plt_signal = signal[:, dim]
-
-            # # remove all points where it hits zero to avoid drawing on the axis
-            # remove_ind = np.argwhere(plt_signal == 0)
-            # edges_left = np.argwhere(np.diff(remove_ind, axis=0) > 1)
-            # edges_left = edges_left[:, 0]  # keep the left edge at zero
-            # edges_right = edges_left + 1  # keep the right edge at zero
-            # remove_ind = np.delete(
-            #     remove_ind, np.concatenate((edges_left, edges_right))
-            # )
-            # # TODO: probably needs checking if remove_ind is within bounds
-            # # or just removal of all indices out of bounds
-            # plt_signal = np.delete(plt_signal, remove_ind)
-            # plt_time = np.delete(plt_time, remove_ind)
 
             ax.fill_between(
                 self.t[:, 0],
@@ -193,45 +196,6 @@ class Sequence:
                     self._plot_channel(ax, name_channel)
                     self._plot_annotations(ax, name_channel)
 
-            style = self.axes_styles[name_channel]
-            x0, x1 = self.t[[0, -1], 0].tolist()
-            ax.arrow(
-                x=x0,
-                y=0,
-                dx=x1 - x0,
-                dy=np.finfo(float).eps,
-                head_width=0.15,
-                head_length=style.arrow_length,
-                lw=style.axes_width,
-                fc=style.axes_color,
-                ec=style.axes_color,
-                clip_on=False,
-                zorder=100,
-            )
         # transAxes is easier to use when axes do not have arbitrary offset between
         plt.subplots_adjust(hspace=0)
         return fig, axes
-
-    def add_vline(self, axes_to_span, t, **kwargs):
-        """ Add vertical lines to specified axes
-
-        Unlike many (all) other ``add_`` methods, this method operates on axes
-        (i.e. subplots), which justifies it acting on all axes at once, rather than
-        adding individual vertical plots to each channel, as elements are added.
-        As of now it expects actual axes to work on, rather than their labels
-        (which are defined as ax2channel keys)
-
-        Parameters
-        ----------
-        axes_to_span : iterable of matplotlib's axes
-            Axes to draw a vertical line over
-        t : float
-            Point in time where to add a line
-        **kwargs
-            Other optional arguments are passed to plt.Line2D constructor
-        """
-        fig = plt.gcf()
-        for ax in axes_to_span:
-            trans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
-            line = plt.Line2D([t, t], [0, 1], transform=trans, **kwargs)
-            fig.add_artist(line)

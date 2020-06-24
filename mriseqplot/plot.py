@@ -2,8 +2,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
-from matplotlib.path import Path
-from matplotlib.patches import FancyArrowPatch
+import scipy.ndimage as ndi
 from ipdb import set_trace
 
 defaults_mpl = {
@@ -16,7 +15,7 @@ for k, v in defaults_mpl.items():
 
 rcParams = {
     "arrow_width": 0.15,  # data coords
-    "arrow_length": 0.01,  # axes coords
+    "arrow_length": 0.20,  # data coords
     "axes_ticks": False,
 }
 
@@ -36,19 +35,6 @@ def _format_axes_base(axes):
             ax.spines[side].set_visible(False)
         ax.spines["bottom"].set_position("zero")
 
-        trans = transforms.blended_transform_factory(ax.transAxes, ax.transData)
-        ax.arrow(
-            x=1.0,  # transAxes: axes coords
-            y=0.0,  # transData: data coords
-            dx=np.finfo(float).eps,  # must be smth
-            dy=0,
-            transform=trans,
-            head_width=rcParams["arrow_width"],  # data coords
-            head_length=rcParams["arrow_length"],  # axes coords
-            fc=mpl.rcParams["axes.edgecolor"],
-            ec=mpl.rcParams["axes.edgecolor"],
-            clip_on=False,
-        )
     return axes
 
 
@@ -65,8 +51,6 @@ def _plot_hline(ax, xs, y, text=None, arrow_style="<|-|>"):
         y_label = y  # why would it ever be a vector?
         _plot_label(ax, x_label, y_label, text)
 
-    dx = xs[1] - xs[0]
-    dy = np.finfo(float).eps
     # the most versatile way to create all sorts of arrows
     ax.annotate(
         "", xy=(xs[0], y), xytext=(xs[1], y), arrowprops=dict(arrowstyle=arrow_style),
@@ -98,7 +82,7 @@ def _plot_vline(axes_to_span, t, **kwargs):
         ax.add_artist(line)
 
 
-def _time_axis_as_disconected_path(channels):
+def _project_channel_on_dime_axis(channels):
     """ Build a mpl.path.Path object which shows axis where all channels are empty
     Parameters
     ----------
@@ -107,8 +91,6 @@ def _time_axis_as_disconected_path(channels):
 
     tmp_stack = np.concatenate(np.broadcast_arrays(*channels), axis=1)
     all_nan = np.isnan(tmp_stack).all(axis=1)
-    verts_x = np.linspace(0, 1, len(all_nan))  # equiv. to the length of the time axis
-    verts = [(xi, 0) for xi in verts_x]
-    codes = [Path.LINETO if nan else Path.MOVETO for nan in all_nan]
-    path = Path([(0, 0)] + verts, [Path.MOVETO] + codes)
-    return FancyArrowPatch(path=path)
+    all_nan_dil = ndi.binary_dilation(all_nan, np.ones(3,))
+    axis = np.where(all_nan_dil, 0, np.nan)
+    return axis

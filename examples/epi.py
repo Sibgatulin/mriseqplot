@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mriseqplot.core import Sequence
+from mriseqplot.style import SeqStyle
 from mriseqplot.shapes import adc, rf_sinc, trapezoid
+from mriseqplot.plot import _plot_vline
 
 t = np.linspace(-0.2, 20, 10000)[:, None]
 sequence = Sequence(t, ["RF", "ADC", "Slice", "Phase", "Frequency"])
@@ -84,12 +86,12 @@ axes_map = {
 }
 fig, axes = sequence.plot_scheme(axes_map)
 # annotations to highlight the relation between elements
-sequence.add_vline(axes, t=t_epi_start, linestyle=":", color="C0", alpha=0.5)
-sequence.add_vline(axes, t=t_start_block, linestyle="--", color="C1", alpha=0.5)
-sequence.add_vline(
+_plot_vline(axes, t=t_epi_start, linestyle=":", color="C0", alpha=0.5)
+_plot_vline(axes, t=t_start_block, linestyle="--", color="C1", alpha=0.5)
+_plot_vline(
     axes, t=t_start_block + dt_ramp_up + dt_flat, linestyle="--", color="C2", alpha=0.5
 )
-sequence.add_vline(
+_plot_vline(
     axes,
     t=t_start_block + dt_ramp_up + dt_flat + dt_blip_bottom,
     linestyle="--",
