@@ -1,8 +1,9 @@
 import numpy as np
+from ipdb import set_trace
 
 
 def rf_sinc(t, t_start, duration, side_lobes):
-    y = np.full_like(t, np.nan)
+    y = np.full_like(t, np.nan, dtype=float)
     idx_rf = (t > t_start) & (t < t_start + duration)
     t_rf = t[idx_rf] - t_start - duration / 2
     y[idx_rf] = np.sin(t_rf / duration * 2 * np.pi * (side_lobes + 1)) / t_rf
@@ -12,7 +13,7 @@ def rf_sinc(t, t_start, duration, side_lobes):
 
 def adc(t, t_start, duration):
     dt = t[1] - t[0]
-    y = np.full_like(t, np.nan)
+    y = np.full_like(t, np.nan, dtype=float)
     idx_rf = (t > t_start) & (t < t_start + duration)
     idx_edges = np.isclose(t, [t_start, t_start + duration], atol=dt / 2).any(axis=-1)
     y[idx_rf] = 1
@@ -39,7 +40,7 @@ def trapezoid(t, t_start, t_flat_out, t_ramp_down):
     x : np.array, 1D
         Array of the same dtype as t, representing the trapezoid gradient
     """
-    x = np.full_like(t, np.nan)
+    x = np.full_like(t, np.nan, dtype=float)
     dt_ramp = t_flat_out - t_start
     idx_ramp_up = (t_start < t) & (t <= t_flat_out)
     idx_flat = (t_flat_out < t) & (t <= t_ramp_down)
