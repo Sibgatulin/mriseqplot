@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 from mriseqplot.style import SeqStyle
 from typing import Callable, List
+from mriseqplot.plot import _format_axes_base
 
 
 class Sequence:
@@ -23,12 +24,10 @@ class Sequence:
         self.t = t
         self.anno = {}
         self.channels = {}
-        self.axes_names = {}
         self.axes_styles = {}
         for channel in channels:
             self.channels[channel] = np.zeros_like(t)
             self.axes_styles[channel] = SeqStyle()
-            self.axes_names[channel] = channel
             self.anno[channel] = []
 
     def add_annotation(self, channel_name: str, t, ampl, **kwargs):
@@ -63,7 +62,7 @@ class Sequence:
             warnings.warn(f"Got an overlap in {channel_name} using {callback.__name__}")
         self.channels[channel_name] = self.channels[channel_name] + unit
 
-    def _format_axes(self, axes, ax2channel, padding_factor=1.1):
+    def _format_axes_data(self, axes, ax2channel, padding_factor=1.1):
         labels = ax2channel.keys()
         chan_axes = ax2channel.values()
 
@@ -81,7 +80,6 @@ class Sequence:
                 ylim[1] = max(ylim[1], max(ampl))
 
         for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels,):
-            ax.set_yticks([])
             ax.set_ylabel(
                 ax_name,
                 fontsize=style.font_size,
@@ -90,34 +88,12 @@ class Sequence:
                 horizontalalignment="right",
                 multialignment="center",
             )
-            if not style.axes_ticks:
-                ax.set_xticks([])
-            ax.set_xlabel("t", fontsize=style.font_size)
-            ax.xaxis.set_label_coords(1.02, 0.4)
 
-            for side in ["left", "top", "right", "bottom"]:
-                ax.spines[side].set_visible(False)
-            ax.spines["bottom"].set_position("zero")
+            # don't understand why keeping the default leaves blank space before arrow
+            # and messes with the label position... 🤔
+            ax.set_xlim(self.t[0], self.t[-1])
+            ax.set_ylim(ylim[0], ylim[1])
 
-            for side in ["bottom", "left", "top", "right"]:
-                ax.spines[side].set_linewidth(style.axes_width)
-                ax.spines[side].set_color(style.axes_color)
-
-            ax.axes.set_xlim(self.t[0], self.t[-1])
-            ax.axes.set_ylim(ylim[0], ylim[1])
-
-            ax.axes.arrow(
-                np.squeeze(self.t[-1]),
-                0,
-                0.00000001,
-                0,
-                head_width=0.15,
-                head_length=style.arrow_length,
-                lw=style.axes_width,
-                fc=style.axes_color,
-                ec=style.axes_color,
-                clip_on=False,
-            )
         return axes
 
     def _plot_annotations(self, ax, name_channel):
@@ -132,83 +108,6 @@ class Sequence:
             draw_style = style
             if anno["style"] is not None:
                 draw_style = anno["style"]  # use channel style
-
-            # draw lines
-            text_alignment = "center"
-            if (not isinstance(t, float) and len(t) > 1) and (
-                not isinstance(ampl, float) and len(ampl) > 1
-            ):
-                has_arrow = anno["arrow"] is not None and anno["arrow"]
-                line_t = t
-                if has_arrow:
-                    line_t[0] += draw_style.arrow_length
-                    line_t[1] -= draw_style.arrow_length
-
-                ax.plot(
-                    line_t,
-                    ampl,
-                    color=draw_style.color,
-                    linewidth=draw_style.width,
-                    clip_on=False,
-                    zorder=draw_style.zorder + 40,
-                )
-                text_alignment = "bottom"
-
-                if has_arrow:
-                    # left arrow
-                    ax.axes.arrow(
-                        line_t[0],
-                        ampl[0],
-                        -(line_t[-1] - line_t[0]) * 0.000001,
-                        -(ampl[-1] - ampl[0]) * 0.0001,
-                        head_width=0.15,
-                        head_length=draw_style.arrow_length,
-                        lw=draw_style.axes_width,
-                        fc=draw_style.axes_color,
-                        ec=draw_style.axes_color,
-                        clip_on=False,
-                    )
-
-                    # right arrow
-                    ax.axes.arrow(
-                        line_t[-1],
-                        ampl[-1],
-                        (line_t[-1] - line_t[0]) * 0.000001,
-                        (ampl[-1] - ampl[0]) * 0.0001,
-                        head_width=0.15,
-                        head_length=draw_style.arrow_length,
-                        lw=draw_style.axes_width,
-                        fc=draw_style.axes_color,
-                        ec=draw_style.axes_color,
-                        clip_on=False,
-                    )
-
-            # draw text
-            if anno["text"] is not None:
-                textPos = [0, 0]
-                # get text x-position
-                if not isinstance(t, float) and len(t) > 1:
-                    textPos[0] = t[0] + (t[-1] - t[0]) / 2
-                else:
-                    textPos[0] = t
-
-                # get text y-position
-                if not isinstance(ampl, float) and len(ampl) > 1:
-                    textPos[1] = ampl[0] + (ampl[-1] - ampl[0]) / 2
-                else:
-                    textPos[1] = ampl
-
-                # draw text
-                ax.text(
-                    textPos[0],
-                    textPos[1],
-                    anno["text"],
-                    horizontalalignment="center",
-                    verticalalignment=text_alignment,
-                    fontsize=draw_style.font_size,
-                    color=draw_style.font_color,
-                    zorder=draw_style.zorder + 50,
-                )
 
     def _plot_channel(self, ax, name_channel):
         signal = self.channels[name_channel]
@@ -273,7 +172,8 @@ class Sequence:
         if len(self.channels) == 1:  # a little ugly workaround
             axes = [axes]
 
-        axes = self._format_axes(axes, ax2channel)
+        axes = _format_axes_base(axes)
+        axes = self._format_axes_data(axes, ax2channel)
         for ax, (label, channels) in zip(axes, ax2channel.items()):
             # only one channel for this axis
             if isinstance(channels, str):

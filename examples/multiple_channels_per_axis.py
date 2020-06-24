@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from mriseqplot.core import Sequence
 from mriseqplot.style import SeqStyle
 from mriseqplot.shapes import adc, rf_sinc, trapezoid
+from mriseqplot.plot import _plot_label, _plot_hline, _plot_vline
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -54,13 +55,9 @@ else:
 sequence.add_element(
     "RF", rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2,
 )
-sequence.add_annotation("RF", 0.6, -0.6, text="90° Excitation Pulse")
-sequence.add_annotation("RF", [0.6, 3.0], [1.4, 1.4], text="Echo-Time (TE)", arrow=True)
-
 sequence.add_element(
     "ADC", adc, ampl=1, t_start=2.2, duration=1.6,
 )
-sequence.add_annotation("ADC", 3.0, 0.5, text="Data Sampling")
 
 sequence.add_element(
     "Phase",
@@ -91,6 +88,10 @@ axes_map = {
     "Frequency\nEncoding": "Frequency",
 }
 fig, axes = sequence.plot_scheme(axes_map)
-sequence.add_vline(axes, t=3.0, linestyle=":", color="k", alpha=0.5)
-sequence.add_vline(axes, t=0.6, linestyle=":", color="k", alpha=0.5)
+_plot_vline(axes, t=3.0, linestyle=":", color="k", alpha=0.5)
+_plot_vline(axes, t=0.6, linestyle=":", color="k", alpha=0.5)
+_plot_label(axes[0], 0.6, -0.6, text="90° Excitation Pulse")
+_plot_label(axes[0], 3.0, 0.5, text="Data Sampling")
+_plot_hline(axes[0], [0.6, 3.0], 1.4, text="Echo-Time (TE)")
+axes[0].set_ylim([-1, 2])
 plt.show()
