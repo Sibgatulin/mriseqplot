@@ -184,7 +184,7 @@ class Sequence:
             axes = [axes]
 
         axes = _format_axes_base(axes)
-        axes = self._format_axes(axes, self.ax2channel.keys())
+        axes = self._format_axes_data(axes)
         for ax, (label, channels) in zip(axes, self.ax2channel.items()):
             for name_channel in channels:
                 self._plot_channel(ax, name_channel)
