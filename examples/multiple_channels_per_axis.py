@@ -90,3 +90,9 @@ sequence.add_element(
 )
 
 fig, axes = sequence.plot_scheme()
+_plot_vline(axes, t=3.0, linestyle=":", color="k", alpha=0.5)
+_plot_vline(axes, t=0.6, linestyle=":", color="k", alpha=0.5)
+_plot_label(axes[0], 0.6, -0.6, text="90° Excitation Pulse")
+_plot_label(axes[0], 3.0, 0.5, text="Data Sampling")
+_plot_hline(axes[0], [0.6, 3.0], 1.4, text="Echo-Time (TE)")
+plt.show()
