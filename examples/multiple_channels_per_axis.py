@@ -1,11 +1,18 @@
+import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 from mriseqplot.core import Sequence
-from mriseqplot.shapes import trapezoid
-from mriseqplot.shapes import rf_sinc
-from mriseqplot.shapes import adc
 from mriseqplot.style import SeqStyle
+from mriseqplot.shapes import adc, rf_sinc, trapezoid
+from mriseqplot.plot import _plot_label, _plot_hline, _plot_vline
 
-useColors = False
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--colors",
+    action="store_true",
+    help="Produce a coloured diagram as opposed to black and white one",
+)
+args = parser.parse_args()
 
 # define the time axis
 t = np.linspace(-0.2, 4.5, 10000)[:, None]
@@ -22,7 +29,7 @@ axes_map = {
 sequence = Sequence(t, channels, axes_map)
 
 # set custom style for phase encoding and slice selection
-if useColors:
+if args.colors:
     style_ph = SeqStyle()
     style_ph.color = [0.7, 0, 0]
     style_ph.color_fill = [0.7, 0, 0, 0.2]
@@ -56,13 +63,9 @@ else:
 sequence.add_element(
     "RF", rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2,
 )
-sequence.add_annotation("RF", 0.6, -0.6, text="90° Excitation Pulse")
-sequence.add_annotation("RF", [0.6, 3.0], [1.4, 1.4], text="Echo-Time (TE)", arrow=True)
-
 sequence.add_element(
     "ADC", adc, ampl=1, t_start=2.2, duration=1.6,
 )
-sequence.add_annotation("ADC", 3.0, 0.5, text="Data Sampling")
 
 sequence.add_element(
     "Phase",

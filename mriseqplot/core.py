@@ -1,8 +1,11 @@
 import warnings
+import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.transforms as transforms
 from mriseqplot.style import SeqStyle
 from typing import Callable, List
+from mriseqplot.plot import _format_axes_base, _project_channel_on_dime_axis, rcParams
 
 
 class Sequence:
@@ -28,12 +31,10 @@ class Sequence:
         self.t = t
         self.anno = {}
         self.channels = {}
-        self.axes_names = {}
         self.axes_styles = {}
         for channel in channels:
-            self.channels[channel] = np.zeros_like(t)
+            self.channels[channel] = np.full_like(t, np.nan)
             self.axes_styles[channel] = SeqStyle()
-            self.axes_names[channel] = channel
             self.anno[channel] = []
 
         if ax2channel is None:
@@ -71,20 +72,36 @@ class Sequence:
         chosen axis and issues a warning if it does
         """
         unit = ampl * callback(self.t, **kwargs)
-        overlap = np.logical_and(self.channels[channel_name], unit)
-        if overlap.any():
-            warnings.warn(f"Got an overlap in {channel_name} using {callback.__name__}")
-        self.channels[channel_name] = self.channels[channel_name] + unit
 
-    def _format_axes(self, axes, labels):
+        # Stacking along a new dim needs explicit broadcasting if arrays mismatch
+        tmp_stack = np.stack(
+            np.broadcast_arrays(self.channels[channel_name], unit), axis=-1
+        )
+        # np.nan + anything is np.nan -> use nansum.
+        sum_no_nan = np.nansum(tmp_stack, axis=-1)
+        # Caveat: nansum substitutes all np.nan for 0s, which is undesirable
+        # -> need to keep nans in both arrays manually
+        both_nan = np.isnan(tmp_stack).all(axis=-1)
+        self.channels[channel_name] = np.where(both_nan, np.nan, sum_no_nan)
+
+    def _format_axes_data(self, axes, padding_factor=1.1):
+        labels = self.ax2channel.keys()
+        chan_axes = self.ax2channel.values()
+
         # set consistent y-limit as maximum from all plots
         ylim = [0.0, 0.0]
         for signal in self.channels.values():
-            ylim[0] = min(ylim[0], np.min(signal))
-            ylim[1] = max(ylim[1], np.max(signal))
+            ylim[0] = min(ylim[0], padding_factor * np.nanmin(signal))
+            ylim[1] = max(ylim[1], padding_factor * np.nanmax(signal))
+        for chan_anno in self.anno.values():
+            for anno in chan_anno:
+                ampl = anno["ampl"]
+                if isinstance(ampl, float):
+                    ampl = [ampl]  # make list
+                ylim[0] = min(ylim[0], min(ampl))
+                ylim[1] = max(ylim[1], max(ampl))
 
         for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels,):
-            ax.set_yticks([])
             ax.set_ylabel(
                 ax_name,
                 fontsize=style.font_size,
@@ -93,37 +110,30 @@ class Sequence:
                 horizontalalignment="right",
                 multialignment="center",
             )
-            if not style.axes_ticks:
-                ax.set_xticks([])
-            ax.set_xlabel("t", fontsize=style.font_size)
-            ax.xaxis.set_label_coords(1.02, 0.4)
-
-            for side in ["left", "top", "right", "bottom"]:
-                ax.spines[side].set_visible(False)
-            ax.spines["bottom"].set_position("zero")
-
-            for side in ["bottom", "left", "top", "right"]:
-                ax.spines[side].set_linewidth(style.axes_width)
-                ax.spines[side].set_color(style.axes_color)
-
-            ax.axes.set_xlim(self.t[0], self.t[-1])
-            ax.axes.set_ylim(ylim[0], ylim[1])
-
-            ax.axes.arrow(
-                np.squeeze(self.t[-1]),
-                0,
-                0.00000001,
-                0,
-                head_width=0.15,
-                head_length=style.arrow_length,
-                lw=style.axes_width,
-                fc=style.axes_color,
-                ec=style.axes_color,
+        for ax, channel_names in zip(axes, chan_axes):
+            channels = [self.channels[k] for k in channel_names]
+            axis = _project_channel_on_dime_axis(channels)
+            ax.plot(
+                self.t, axis, lw=style.axes_width, color=style.axes_color,
+            )
+            ax.arrow(
+                x=self.t[-1],
+                y=0.0,
+                dx=np.finfo(float).eps,  # must be smth
+                dy=0,
+                head_width=rcParams["arrow_width"],  # data coords
+                head_length=rcParams["arrow_length"],  # axes coords
+                fc=mpl.rcParams["axes.edgecolor"],
+                ec=mpl.rcParams["axes.edgecolor"],
                 clip_on=False,
             )
+
         return axes
 
-    def _plot_annotations(self, ax, annotation, style):
+    def _plot_annotations(self, ax, name_channel):
+        annotation = self.anno[name_channel]
+        style = self.axes_styles[name_channel]
+
         for anno in annotation:
             t = anno["t"]
             ampl = anno["ampl"]
@@ -133,105 +143,18 @@ class Sequence:
             if anno["style"] is not None:
                 draw_style = anno["style"]  # use channel style
 
-            # draw lines
-            text_alignment = "center"
-            if (not isinstance(t, float) and len(t) > 1) and (
-                not isinstance(ampl, float) and len(ampl) > 1
-            ):
-                has_arrow = anno["arrow"] is not None and anno["arrow"]
-                line_t = t
-                if has_arrow:
-                    line_t[0] += draw_style.arrow_length
-                    line_t[1] -= draw_style.arrow_length
+    def _plot_channel(self, ax, name_channel):
+        signal = self.channels[name_channel]
+        style = self.axes_styles[name_channel]
 
-                ax.plot(
-                    line_t,
-                    ampl,
-                    color=draw_style.color,
-                    linewidth=draw_style.width,
-                    clip_on=False,
-                    zorder=draw_style.zorder + 40,
-                )
-                text_alignment = "bottom"
-
-                if has_arrow:
-                    # left arrow
-                    ax.axes.arrow(
-                        line_t[0],
-                        ampl[0],
-                        -(line_t[-1] - line_t[0]) * 0.000001,
-                        -(ampl[-1] - ampl[0]) * 0.0001,
-                        head_width=0.15,
-                        head_length=draw_style.arrow_length,
-                        lw=draw_style.axes_width,
-                        fc=draw_style.axes_color,
-                        ec=draw_style.axes_color,
-                        clip_on=False,
-                    )
-
-                    # right arrow
-                    ax.axes.arrow(
-                        line_t[-1],
-                        ampl[-1],
-                        (line_t[-1] - line_t[0]) * 0.000001,
-                        (ampl[-1] - ampl[0]) * 0.0001,
-                        head_width=0.15,
-                        head_length=draw_style.arrow_length,
-                        lw=draw_style.axes_width,
-                        fc=draw_style.axes_color,
-                        ec=draw_style.axes_color,
-                        clip_on=False,
-                    )
-
-            # draw text
-            if anno["text"] is not None:
-                textPos = [0, 0]
-                # get text x-position
-                if not isinstance(t, float) and len(t) > 1:
-                    textPos[0] = t[0] + (t[-1] - t[0]) / 2
-                else:
-                    textPos[0] = t
-
-                # get text y-position
-                if not isinstance(ampl, float) and len(ampl) > 1:
-                    textPos[1] = ampl[0] + (ampl[-1] - ampl[0]) / 2
-                else:
-                    textPos[1] = ampl
-
-                # draw text
-                ax.text(
-                    textPos[0],
-                    textPos[1],
-                    anno["text"],
-                    horizontalalignment="center",
-                    verticalalignment=text_alignment,
-                    fontsize=draw_style.font_size,
-                    color=draw_style.font_color,
-                    zorder=draw_style.zorder + 50,
-                )
-
-    def _plot_channel(self, ax, signal, style):
         # plotting of the data
         signal_dims = signal.shape
         for dim in range(signal_dims[1]):
             plt_time = self.t
             plt_signal = signal[:, dim]
 
-            # remove all points where it hits zero to avoid drawing on the axis
-            remove_ind = np.argwhere(plt_signal == 0)
-            edges_left = np.argwhere(np.diff(remove_ind, axis=0) > 1)
-            edges_left = edges_left[:, 0]  # keep the left edge at zero
-            edges_right = edges_left + 1  # keep the right edge at zero
-            remove_ind = np.delete(
-                remove_ind, np.concatenate((edges_left, edges_right))
-            )
-            # TODO: probably needs checking if remove_ind is within bounds
-            # or just removal of all indices out of bounds
-            plt_signal = np.delete(plt_signal, remove_ind)
-            plt_time = np.delete(plt_time, remove_ind)
-
             ax.fill_between(
-                plt_time,
+                self.t[:, 0],
                 plt_signal,
                 0,
                 facecolor=style.color_fill,
@@ -242,7 +165,7 @@ class Sequence:
             )
 
             ax.plot(
-                plt_time,
+                self.t[:, 0],
                 plt_signal,
                 color=style.color,
                 linewidth=style.width,
@@ -260,54 +183,13 @@ class Sequence:
         if len(self.channels) == 1:  # a little ugly workaround
             axes = [axes]
 
+        axes = _format_axes_base(axes)
         axes = self._format_axes(axes, self.ax2channel.keys())
-
         for ax, (label, channels) in zip(axes, self.ax2channel.items()):
             for name_channel in channels:
-                self._plot_channel(
-                    ax, self.channels[name_channel], self.axes_styles[name_channel]
-                )
-                self._plot_annotations(
-                    ax, self.anno[name_channel], self.axes_styles[name_channel]
-                )
+                self._plot_channel(ax, name_channel)
+                self._plot_annotations(ax, name_channel)
 
-            style = self.axes_styles[name_channel]
-            if style.axes_overlayed:
-                # manually draw x-axes, first find the points where no data was drawn
-                axis_data = np.arange(0, len(self.t))
-                for line in ax.lines:
-                    x_data = line.get_xdata()
-                    ind = np.argwhere(x_data == self.t)
-                    ind = ind[:, 0]
-                    axis_data[ind[1:-1]] = -1
-
-                # cut into sections and draw step by step
-                sections = axis_data == -1
-                cur_section = np.array([], dtype=np.int64)
-                for iPoint in np.arange(0, len(self.t)):
-
-                    if not sections[iPoint]:
-                        cur_section = np.hstack([cur_section, axis_data[iPoint]])
-
-                    if ((sections[iPoint]) or (iPoint == len(self.t) - 1)) and (
-                        len(cur_section) > 0
-                    ):
-                        ax.plot(
-                            self.t[cur_section],
-                            np.zeros([len(cur_section), 1]),
-                            color=style.axes_color,
-                            linewidth=style.axes_width,
-                            clip_on=False,
-                            zorder=100,
-                        )
-                        cur_section = np.array([], dtype=np.int64)
-            else:
-                ax.plot(
-                    np.array([self.t[0], self.t[-1]]),
-                    np.array([0, 0]),
-                    color=style.axes_color,
-                    linewidth=style.axes_width,
-                    clip_on=False,
-                    zorder=100,
-                )
-        plt.show()
+        # transAxes is easier to use when axes do not have arbitrary offset between
+        plt.subplots_adjust(hspace=0)
+        return fig, axes
