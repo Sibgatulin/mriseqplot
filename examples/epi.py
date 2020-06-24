@@ -6,7 +6,15 @@ from mriseqplot.shapes import adc, rf_sinc, trapezoid
 from mriseqplot.plot import _plot_vline
 
 t = np.linspace(-0.2, 20, 10000)[:, None]
-sequence = Sequence(t, ["RF", "ADC", "Slice", "Phase", "Frequency"])
+channels = ["RF", "ADC", "Slice", "Phase", "Frequency"]
+axes_map = {
+    "RF/ADC": ["RF", "ADC"],
+    "Phase\nEncoding": "Phase",
+    "Slice\nSelection": "Slice",
+    "Frequency\nEncoding": "Frequency",
+}
+
+sequence = Sequence(t, channels, axes_map)
 
 sequence.add_element(
     "RF", rf_sinc, ampl=1, t_start=0.2, duration=0.8, side_lobes=2,
@@ -78,13 +86,7 @@ for idx in range(n_epi_steps):
         "ADC", adc, ampl=0.5, t_start=t_start_adc, duration=dt_flat,
     )
 
-axes_map = {
-    "RF/ADC": ["RF", "ADC"],
-    "Slice\nSelection": "Slice",
-    "Phase\nEncoding": "Phase",
-    "Frequency\nEncoding": "Frequency",
-}
-fig, axes = sequence.plot_scheme(axes_map)
+fig, axes = sequence.plot_scheme()
 # annotations to highlight the relation between elements
 _plot_vline(axes, t=t_epi_start, linestyle=":", color="C0", alpha=0.5)
 _plot_vline(axes, t=t_start_block, linestyle="--", color="C1", alpha=0.5)
