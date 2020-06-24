@@ -2,7 +2,7 @@ import numpy as np
 
 
 def rf_sinc(t, t_start, duration, side_lobes):
-    y = np.zeros_like(t)
+    y = np.full_like(t, np.nan)
     idx_rf = (t > t_start) & (t < t_start + duration)
     t_rf = t[idx_rf] - t_start - duration / 2
     y[idx_rf] = np.sin(t_rf / duration * 2 * np.pi * (side_lobes + 1)) / t_rf
@@ -11,12 +11,12 @@ def rf_sinc(t, t_start, duration, side_lobes):
 
 
 def adc(t, t_start, duration):
-    y = np.zeros_like(t)
-    idx_rf = np.argwhere((t > t_start) & (t < t_start + duration))
-    idx_rf = idx_rf[:, 0]
+    dt = t[1] - t[0]
+    y = np.full_like(t, np.nan)
+    idx_rf = (t > t_start) & (t < t_start + duration)
+    idx_edges = np.isclose(t, [t_start, t_start + duration], atol=dt / 2).any(axis=-1)
     y[idx_rf] = 1
-    y[idx_rf[0]] = np.finfo(np.float32).eps  # edges down to zero
-    y[idx_rf[-1]] = np.finfo(np.float32).eps  # edges down to zero
+    y[idx_edges] = 0
     return y
 
 
@@ -39,7 +39,7 @@ def trapezoid(t, t_start, t_flat_out, t_ramp_down):
     x : np.array, 1D
         Array of the same dtype as t, representing the trapezoid gradient
     """
-    x = np.zeros_like(t)
+    x = np.full_like(t, np.nan)
     dt_ramp = t_flat_out - t_start
     idx_ramp_up = (t_start < t) & (t <= t_flat_out)
     idx_flat = (t_flat_out < t) & (t <= t_ramp_down)
