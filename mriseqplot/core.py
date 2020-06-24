@@ -33,7 +33,7 @@ class Sequence:
         self.channels = {}
         self.axes_styles = {}
         for channel in channels:
-            self.channels[channel] = np.full_like(t, np.nan)
+            self.channels[channel] = np.full_like(t, np.nan, dtype=float)
             self.axes_styles[channel] = SeqStyle()
             self.anno[channel] = []
 
