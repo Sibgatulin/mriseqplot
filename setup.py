@@ -16,6 +16,6 @@ setup(
     author_email="renat.sibgatulin@gmail.com",
     license="MIT",
     packages=find_packages(),
-    install_requires=["numpy", "matplotlib"],
+    install_requires=["numpy", "matplotlib", "scipy"],
     extras_require={"dev": ["pre-commit"],},
 )
