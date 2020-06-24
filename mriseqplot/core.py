@@ -1,11 +1,8 @@
-import warnings
-import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.transforms as transforms
 from mriseqplot.style import SeqStyle
 from typing import Callable, List
-from mriseqplot.plot import _format_axes_base, _project_channel_on_dime_axis, rcParams
+from mriseqplot.plot import _format_axes_base, _project_channel_on_time_axis, rcParams
 
 
 class Sequence:
@@ -29,13 +26,11 @@ class Sequence:
         initialization all waveforms set to zero-filled arrays the same length as t.
         """
         self.t = t
-        self.anno = {}
         self.channels = {}
         self.axes_styles = {}
         for channel in channels:
             self.channels[channel] = np.full_like(t, np.nan, dtype=float)
             self.axes_styles[channel] = SeqStyle()
-            self.anno[channel] = []
 
         if ax2channel is None:
             # trivial map
@@ -44,14 +39,6 @@ class Sequence:
             self.ax2channel = {
                 k: [v] if isinstance(v, str) else v for k, v in ax2channel.items()
             }
-
-    def add_annotation(self, channel_name: str, t, ampl, **kwargs):
-        text = kwargs.get("text", None)
-        arrow = kwargs.get("arrow", None)
-        style = kwargs.get("style", None)
-
-        item = {"t": t, "ampl": ampl, "text": text, "arrow": arrow, "style": style}
-        self.anno[channel_name].append(item)
 
     def add_element(self, channel_name: str, callback: Callable, ampl=1, **kwargs):
         """ Generic function to add an element to a waveform
@@ -93,15 +80,10 @@ class Sequence:
         for signal in self.channels.values():
             ylim[0] = min(ylim[0], padding_factor * np.nanmin(signal))
             ylim[1] = max(ylim[1], padding_factor * np.nanmax(signal))
-        for chan_anno in self.anno.values():
-            for anno in chan_anno:
-                ampl = anno["ampl"]
-                if isinstance(ampl, float):
-                    ampl = [ampl]  # make list
-                ylim[0] = min(ylim[0], min(ampl))
-                ylim[1] = max(ylim[1], max(ampl))
+        for ax in axes:
+            ax.set_ylim(ylim)
 
-        for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels,):
+        for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels):
             ax.set_ylabel(
                 ax_name,
                 fontsize=style.font_size,
@@ -112,7 +94,7 @@ class Sequence:
             )
         for ax, channel_names in zip(axes, chan_axes):
             channels = [self.channels[k] for k in channel_names]
-            axis = _project_channel_on_dime_axis(channels)
+            axis = _project_channel_on_time_axis(channels)
             ax.plot(
                 self.t, axis, lw=style.axes_width, color=style.axes_color,
             )
@@ -123,25 +105,12 @@ class Sequence:
                 dy=0,
                 head_width=rcParams["arrow_width"],  # data coords
                 head_length=rcParams["arrow_length"],  # axes coords
-                fc=mpl.rcParams["axes.edgecolor"],
-                ec=mpl.rcParams["axes.edgecolor"],
-                clip_on=False,
+                fc=style.axes_color,
+                ec=style.axes_color,
+                # clip_on=False, # why exactly?
             )
 
         return axes
-
-    def _plot_annotations(self, ax, name_channel):
-        annotation = self.anno[name_channel]
-        style = self.axes_styles[name_channel]
-
-        for anno in annotation:
-            t = anno["t"]
-            ampl = anno["ampl"]
-
-            # get style
-            draw_style = style
-            if anno["style"] is not None:
-                draw_style = anno["style"]  # use channel style
 
     def _plot_channel(self, ax, name_channel):
         signal = self.channels[name_channel]
@@ -150,7 +119,6 @@ class Sequence:
         # plotting of the data
         signal_dims = signal.shape
         for dim in range(signal_dims[1]):
-            plt_time = self.t
             plt_signal = signal[:, dim]
 
             ax.fill_between(
@@ -158,10 +126,11 @@ class Sequence:
                 plt_signal,
                 0,
                 facecolor=style.color_fill,
-                edgecolor=[0, 0, 0, 0],
-                linewidth=style.axes_width + style.axes_width * 0,
-                zorder=style.zorder + 5,
-                clip_on=False,
+                # edgecolor=[0, 0, 0, 0], # isn't it such by default?
+                # do we ever want to see the line at all?
+                # linewidth=style.axes_width + style.axes_width * 0,  # excuse me?
+                # zorder=style.zorder + 5,
+                # clip_on=False, # what's the use case?
             )
 
             ax.plot(
@@ -169,8 +138,9 @@ class Sequence:
                 plt_signal,
                 color=style.color,
                 linewidth=style.width,
-                clip_on=False,
-                zorder=style.zorder + 10,  # always on top of fill
+                # clip_on=False, # what's the use case?
+                # do we need zorder here if it's plotted *after* fill_between?
+                # zorder=style.zorder + 10,  # always on top of fill
             )
         return ax
 
@@ -188,7 +158,6 @@ class Sequence:
         for ax, (label, channels) in zip(axes, self.ax2channel.items()):
             for name_channel in channels:
                 self._plot_channel(ax, name_channel)
-                self._plot_annotations(ax, name_channel)
 
         # transAxes is easier to use when axes do not have arbitrary offset between
         plt.subplots_adjust(hspace=0)
