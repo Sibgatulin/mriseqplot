@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
+from matplotlib.path import Path
+from matplotlib.patches import FancyArrowPatch
 from ipdb import set_trace
 
 defaults_mpl = {
@@ -28,7 +30,7 @@ def _format_axes_base(axes):
         if not rcParams["axes_ticks"]:
             ax.set_xticks([])
         ax.set_xlabel("t")
-        ax.xaxis.set_label_coords(1.02, 0.4)
+        ax.xaxis.set_label_coords(1.05, 0.4)
 
         for side in ["left", "top", "right", "bottom"]:
             ax.spines[side].set_visible(False)
@@ -94,3 +96,19 @@ def _plot_vline(axes_to_span, t, **kwargs):
         trans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
         line = plt.Line2D([t, t], [0, 1], transform=trans, **kwargs)
         ax.add_artist(line)
+
+
+def _time_axis_as_disconected_path(channels):
+    """ Build a mpl.path.Path object which shows axis where all channels are empty
+    Parameters
+    ----------
+    channels : iterable of numpy arrays of shape (n, ) or (n, m)
+    """
+
+    tmp_stack = np.concatenate(np.broadcast_arrays(*channels), axis=1)
+    all_nan = np.isnan(tmp_stack).all(axis=1)
+    verts_x = np.linspace(0, 1, len(all_nan))  # equiv. to the length of the time axis
+    verts = [(xi, 0) for xi in verts_x]
+    codes = [Path.LINETO if nan else Path.MOVETO for nan in all_nan]
+    path = Path([(0, 0)] + verts, [Path.MOVETO] + codes)
+    return FancyArrowPatch(path=path)
