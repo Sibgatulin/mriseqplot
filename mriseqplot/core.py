@@ -26,7 +26,7 @@ class Sequence:
         self.channels = {}
         self.axes_styles = {}
         for channel in channels:
-            self.channels[channel] = np.zeros_like(t)
+            self.channels[channel] = np.full_like(t, np.nan)
             self.axes_styles[channel] = SeqStyle()
             self.anno[channel] = []
 
@@ -57,10 +57,17 @@ class Sequence:
         chosen axis and issues a warning if it does
         """
         unit = ampl * callback(self.t, **kwargs)
-        overlap = np.logical_and(self.channels[channel_name], unit)
-        if overlap.any():
-            warnings.warn(f"Got an overlap in {channel_name} using {callback.__name__}")
-        self.channels[channel_name] = self.channels[channel_name] + unit
+
+        # Stacking along a new dim needs explicit broadcasting if arrays mismatch
+        tmp_stack = np.stack(
+            np.broadcast_arrays(self.channels[channel_name], unit), axis=-1
+        )
+        # np.nan + anything is np.nan -> use nansum.
+        sum_no_nan = np.nansum(tmp_stack, axis=-1)
+        # Caveat: nansum substitutes all np.nan for 0s, which is undesirable
+        # -> need to keep nans in both arrays manually
+        both_nan = np.isnan(tmp_stack).all(axis=-1)
+        self.channels[channel_name] = np.where(both_nan, np.nan, sum_no_nan)
 
     def _format_axes_data(self, axes, ax2channel, padding_factor=1.1):
         labels = ax2channel.keys()
@@ -69,8 +76,8 @@ class Sequence:
         # set consistent y-limit as maximum from all plots
         ylim = [0.0, 0.0]
         for signal in self.channels.values():
-            ylim[0] = min(ylim[0], padding_factor * np.min(signal))
-            ylim[1] = max(ylim[1], padding_factor * np.max(signal))
+            ylim[0] = min(ylim[0], padding_factor * np.nanmin(signal))
+            ylim[1] = max(ylim[1], padding_factor * np.nanmax(signal))
         for chan_anno in self.anno.values():
             for anno in chan_anno:
                 ampl = anno["ampl"]
@@ -119,21 +126,21 @@ class Sequence:
             plt_time = self.t
             plt_signal = signal[:, dim]
 
-            # remove all points where it hits zero to avoid drawing on the axis
-            remove_ind = np.argwhere(plt_signal == 0)
-            edges_left = np.argwhere(np.diff(remove_ind, axis=0) > 1)
-            edges_left = edges_left[:, 0]  # keep the left edge at zero
-            edges_right = edges_left + 1  # keep the right edge at zero
-            remove_ind = np.delete(
-                remove_ind, np.concatenate((edges_left, edges_right))
-            )
-            # TODO: probably needs checking if remove_ind is within bounds
-            # or just removal of all indices out of bounds
-            plt_signal = np.delete(plt_signal, remove_ind)
-            plt_time = np.delete(plt_time, remove_ind)
+            # # remove all points where it hits zero to avoid drawing on the axis
+            # remove_ind = np.argwhere(plt_signal == 0)
+            # edges_left = np.argwhere(np.diff(remove_ind, axis=0) > 1)
+            # edges_left = edges_left[:, 0]  # keep the left edge at zero
+            # edges_right = edges_left + 1  # keep the right edge at zero
+            # remove_ind = np.delete(
+            #     remove_ind, np.concatenate((edges_left, edges_right))
+            # )
+            # # TODO: probably needs checking if remove_ind is within bounds
+            # # or just removal of all indices out of bounds
+            # plt_signal = np.delete(plt_signal, remove_ind)
+            # plt_time = np.delete(plt_time, remove_ind)
 
             ax.fill_between(
-                plt_time,
+                self.t[:, 0],
                 plt_signal,
                 0,
                 facecolor=style.color_fill,
@@ -144,7 +151,7 @@ class Sequence:
             )
 
             ax.plot(
-                plt_time,
+                self.t[:, 0],
                 plt_signal,
                 color=style.color,
                 linewidth=style.width,
@@ -187,44 +194,20 @@ class Sequence:
                     self._plot_annotations(ax, name_channel)
 
             style = self.axes_styles[name_channel]
-            if style.axes_overlayed:
-                # manually draw x-axes, first find the points where no data was drawn
-                axis_data = np.arange(0, len(self.t))
-                for line in ax.lines:
-                    x_data = line.get_xdata()
-                    ind = np.argwhere(x_data == self.t)
-                    ind = ind[:, 0]
-                    axis_data[ind[1:-1]] = -1
-
-                # cut into sections and draw step by step
-                sections = axis_data == -1
-                cur_section = np.array([], dtype=np.int64)
-                for iPoint in np.arange(0, len(self.t)):
-
-                    if not sections[iPoint]:
-                        cur_section = np.hstack([cur_section, axis_data[iPoint]])
-
-                    if ((sections[iPoint]) or (iPoint == len(self.t) - 1)) and (
-                        len(cur_section) > 0
-                    ):
-                        ax.plot(
-                            self.t[cur_section],
-                            np.zeros([len(cur_section), 1]),
-                            color=style.axes_color,
-                            linewidth=style.axes_width,
-                            clip_on=False,
-                            zorder=100,
-                        )
-                        cur_section = np.array([], dtype=np.int64)
-            else:
-                ax.plot(
-                    np.array([self.t[0], self.t[-1]]),
-                    np.array([0, 0]),
-                    color=style.axes_color,
-                    linewidth=style.axes_width,
-                    clip_on=False,
-                    zorder=100,
-                )
+            x0, x1 = self.t[[0, -1], 0].tolist()
+            ax.arrow(
+                x=x0,
+                y=0,
+                dx=x1 - x0,
+                dy=np.finfo(float).eps,
+                head_width=0.15,
+                head_length=style.arrow_length,
+                lw=style.axes_width,
+                fc=style.axes_color,
+                ec=style.axes_color,
+                clip_on=False,
+                zorder=100,
+            )
         # transAxes is easier to use when axes do not have arbitrary offset between
         plt.subplots_adjust(hspace=0)
         return fig, axes
