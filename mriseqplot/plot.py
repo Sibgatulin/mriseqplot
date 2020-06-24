@@ -33,27 +33,27 @@ def _format_axes_base(axes):
 
         for side in ["left", "top", "right", "bottom"]:
             ax.spines[side].set_visible(False)
-        ax.spines["bottom"].set_position("zero")
 
     return axes
 
 
-def _plot_label(ax, x, y, text):
+def _plot_label(ax, x, y, text, **kwargs):
     ax.text(
-        x, y, text, horizontalalignment="center", verticalalignment="bottom",
+        x, y, text, horizontalalignment="center", verticalalignment="bottom", **kwargs
     )
     return ax
 
 
-def _plot_hline(ax, xs, y, text=None, arrow_style="<|-|>"):
+def _plot_hline(ax, xs, y, text=None, arrow_style="<|-|>", text_kws={}, **kwargs):
     if text is not None:
         x_label = np.mean(xs)
         y_label = y  # why would it ever be a vector?
-        _plot_label(ax, x_label, y_label, text)
+        _plot_label(ax, x_label, y_label, text, **text_kws)
 
     # the most versatile way to create all sorts of arrows
+    arrow_kws = {"arrowstyle": arrow_style, **kwargs}
     ax.annotate(
-        "", xy=(xs[0], y), xytext=(xs[1], y), arrowprops=dict(arrowstyle=arrow_style),
+        "", xy=(xs[0], y), xytext=(xs[1], y), arrowprops=arrow_kws,
     )
     return ax
 
@@ -82,7 +82,7 @@ def _plot_vline(axes_to_span, t, **kwargs):
         ax.add_artist(line)
 
 
-def _project_channel_on_dime_axis(channels):
+def _project_channel_on_time_axis(channels):
     """ Build a mpl.path.Path object which shows axis where all channels are empty
     Parameters
     ----------
