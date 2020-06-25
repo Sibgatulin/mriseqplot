@@ -1,12 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mriseqplot.style import SeqStyle
 from typing import Callable, List
 from mriseqplot.plot import _format_axes_base, _project_channel_on_time_axis, rcParams
 
 
 class Sequence:
-    def __init__(self, t, channels: List[str], ax2channel=None):
+    """ Class to define and collect sequences of events (e.g gradient wavefronts)
+    that all share the same time axis. This class is not meant to handle the job of
+    representation of the events (refered to as channels).
+    """
+
+    def __init__(self, t, channels: List[str]):
         """ Initialize sequence diagram
         Parameters
         ----------
@@ -27,18 +31,8 @@ class Sequence:
         """
         self.t = t
         self.channels = {}
-        self.axes_styles = {}
         for channel in channels:
             self.channels[channel] = np.full_like(t, np.nan, dtype=float)
-            self.axes_styles[channel] = SeqStyle()
-
-        if ax2channel is None:
-            # trivial map
-            self.ax2channel = {name: [name] for name in channels}
-        else:  # convert single labels to iterables
-            self.ax2channel = {
-                k: [v] if isinstance(v, str) else v for k, v in ax2channel.items()
-            }
 
     def add_element(self, channel_name: str, callback: Callable, ampl=1, **kwargs):
         """ Generic function to add an element to a waveform
@@ -71,32 +65,86 @@ class Sequence:
         both_nan = np.isnan(tmp_stack).all(axis=-1)
         self.channels[channel_name] = np.where(both_nan, np.nan, sum_no_nan)
 
-    def _format_axes_data(self, axes, padding_factor=1.1):
-        labels = self.ax2channel.keys()
-        chan_axes = self.ax2channel.values()
+
+class Diagram:
+    """ Class to map a sequence of events on a figure and to handle the representation
+    """
+
+    def __init__(self, sequence, ax2channel=None):
+        """
+        Parameters
+        ----------
+        sequence : Sequence
+        ax2channel : dict, optional
+            Defines the layout of the desired diagram.
+            Maps from subplots (axes) represented by their labels to channels.
+            If not given, every channel will be plotted in its own subplot and channel
+            name will be used as subplots's ylabel.
+        """
+        self.seq = sequence
+        if ax2channel is None:
+            # trivial map
+            self.ax_names = [name for name in sequence.channels.keys()]
+            self.channel_names = [name for name in sequence.channels.keys()]
+        else:  # convert single labels to iterables
+            self.ax_names = [ax_name for ax_name in ax2channel.keys()]
+            self.channel_names = [
+                [ch] if isinstance(ch, str) else ch for ch in ax2channel.keys()
+            ]
+        self.fig, self.axes = plt.subplots(
+            nrows=len(self.ax_names), sharex=True, sharey=True
+        )
+
+    def plot_scheme(self):
+        """ Plot the sequence diagram """
+        # transAxes is easier to use when axes do not have arbitrary offset between
+        plt.subplots_adjust(hspace=0)
+        self._format_axes_base()
+        self._format_axes_data()
+        for ax, (label, channels) in zip(self.axes, self.ax2channel.items()):
+            for name_channel in channels:
+                self._plot_channel(ax, name_channel)
+
+    def _format_axes_base(self):
+        """ Formats the axes according to the selected style.
+            Only performs data independent formatting """
+
+        for ax in self.axes:
+            ax.set_yticks([])
+            if not rcParams["axes_ticks"]:
+                ax.set_xticks([])
+            ax.set_xlabel("t")
+            ax.xaxis.set_label_coords(1.05, 0.4)
+
+            for side in ["left", "top", "right", "bottom"]:
+                ax.spines[side].set_visible(False)
+
+    def _format_axes_data(self, padding_factor=1.1):
 
         # set consistent y-limit as maximum from all plots
         ylim = [0.0, 0.0]
-        for signal in self.channels.values():
+        for signal in self.seq.channels.values():
             ylim[0] = min(ylim[0], padding_factor * np.nanmin(signal))
             ylim[1] = max(ylim[1], padding_factor * np.nanmax(signal))
-        for ax in axes:
+        for ax in self.axes:
             ax.set_ylim(ylim)
 
-        for ax, style, ax_name in zip(axes, self.axes_styles.values(), labels):
+        for ax, ax_name in zip(self.axes, self.ax_names):
             ax.set_ylabel(
                 ax_name,
-                fontsize=style.font_size,
                 rotation=0,
                 verticalalignment="center",
                 horizontalalignment="right",
                 multialignment="center",
             )
-        for ax, channel_names in zip(axes, chan_axes):
-            channels = [self.channels[k] for k in channel_names]
-            axis = _project_channel_on_time_axis(channels)
+
+    def _plot_time_axes(self):
+        for ax, names_channel_per_ax in zip(self.axes, self.channel_names):
+            channels_per_ax = [self.seq.channels[k] for k in names_channel_per_ax]
+            axis = _project_channel_on_time_axis(channels_per_ax)
+            # color needs fixing
             ax.plot(
-                self.t, axis, lw=style.axes_width, color=style.axes_color,
+                self.seq.t, axis, color=mpl.rcParams["axes.edgecolor"],
             )
             ax.arrow(
                 x=self.t[-1],
@@ -105,15 +153,13 @@ class Sequence:
                 dy=0,
                 head_width=rcParams["arrow_width"],  # data coords
                 head_length=rcParams["arrow_length"],  # axes coords
-                fc=style.axes_color,
-                ec=style.axes_color,
+                fc=mpl.rcParams["axes.edgecolor"],
+                ec=mpl.rcParams["axes.edgecolor"],
                 # clip_on=False, # why exactly?
             )
 
-        return axes
-
     def _plot_channel(self, ax, name_channel):
-        signal = self.channels[name_channel]
+        signal = self.seq.channels[name_channel]
         style = self.axes_styles[name_channel]
 
         # plotting of the data
@@ -137,28 +183,9 @@ class Sequence:
                 self.t[:, 0],
                 plt_signal,
                 color=style.color,
-                linewidth=style.width,
+                # linewidth=style.width, # mpl.rcParams["lines.linewidth"]
                 # clip_on=False, # what's the use case?
                 # do we need zorder here if it's plotted *after* fill_between?
                 # zorder=style.zorder + 10,  # always on top of fill
             )
-        return ax
-
-    def plot_scheme(self):
-        """ Plot the sequence diagram """
-        fig, axes = plt.subplots(nrows=len(self.ax2channel), sharex=True, sharey=True)
-
-        # Following workaround might not make sense in the light of all changes,
-        # TODO: write a test
-        if len(self.channels) == 1:  # a little ugly workaround
-            axes = [axes]
-
-        axes = _format_axes_base(axes)
-        axes = self._format_axes_data(axes)
-        for ax, (label, channels) in zip(axes, self.ax2channel.items()):
-            for name_channel in channels:
-                self._plot_channel(ax, name_channel)
-
-        # transAxes is easier to use when axes do not have arbitrary offset between
-        plt.subplots_adjust(hspace=0)
-        return fig, axes
+        # return ax

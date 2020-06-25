@@ -19,21 +19,6 @@ rcParams = {
 }
 
 # need to set up default global style
-def _format_axes_base(axes):
-    """ Formats the axes according to the selected style.
-        Only performs data independent formatting """
-
-    for ax in axes:
-        ax.set_yticks([])
-        if not rcParams["axes_ticks"]:
-            ax.set_xticks([])
-        ax.set_xlabel("t")
-        ax.xaxis.set_label_coords(1.05, 0.4)
-
-        for side in ["left", "top", "right", "bottom"]:
-            ax.spines[side].set_visible(False)
-
-    return axes
 
 
 def _plot_label(ax, x, y, text, **kwargs):
