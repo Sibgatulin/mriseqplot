@@ -3,7 +3,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 import scipy.ndimage as ndi
-from ipdb import set_trace
 
 defaults_mpl = {
     "axes.linewidth": 2,

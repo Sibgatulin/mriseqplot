@@ -1,5 +1,4 @@
 import numpy as np
-from ipdb import set_trace
 
 
 def rf_sinc(t, t_start, duration, side_lobes):
