@@ -10,7 +10,7 @@ def rf_sinc(t, t_start, duration, side_lobes):
     return y
 
 
-def adc(t, t_start, duration):
+def rect(t, t_start, duration):
     dt = t[1] - t[0]
     y = np.full_like(t, np.nan, dtype=float)
     idx_rf = (t > t_start) & (t < t_start + duration)
