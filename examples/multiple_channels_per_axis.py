@@ -1,10 +1,8 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from mriseqplot.core import Sequence
-from mriseqplot.style import SeqStyle
-from mriseqplot.shapes import adc, rf_sinc, trapezoid
-from mriseqplot.plot import _plot_label, _plot_hline, _plot_vline
+from mriseqplot.core import Channel, Diagram
+from mriseqplot.shapes import rect, rf_sinc, trapezoid
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -12,63 +10,26 @@ parser.add_argument(
     action="store_true",
     help="Produce a coloured diagram as opposed to black and white one",
 )
+parser.add_argument(
+    "--colorblind", action="store_true", help="Use Seaborn colorblind palette",
+)
 args = parser.parse_args()
+if args.colors:
+    style = {}
+if args.colorblind:
+    style = {}
+    import seaborn as sns
+
+    sns.set_palette("colorblind")
+else:
+    style = dict(colors=["k"] * 5, alpha=0.0)
 
 # define the time axis
 t = np.linspace(-0.2, 4.5, 10000)[:, None]
 
-# create sequence diagram object
-channels = ["RF", "ADC", "Slice", "Phase", "Frequency"]
-axes_map = {
-    "RF/ADC": ["RF", "ADC"],
-    "Phase\nEncoding": "Phase",
-    "Slice\nSelection": "Slice",
-    "Frequency\nEncoding": "Frequency",
-}
-
-sequence = Sequence(t, channels, axes_map)
-
-# set custom style for phase encoding and slice selection
-if args.colors:
-    style_ph = SeqStyle()
-    style_ph.color = [0.7, 0, 0]
-    style_ph.color_fill = [0.7, 0, 0, 0.2]
-    style_ph.zorder = 10
-    sequence.axes_styles["Phase"] = style_ph
-
-    style_ss = SeqStyle()
-    style_ss.color = [0.0, 0, 0.7]
-    style_ss.color_fill = [0.0, 0, 0.7, 0.2]
-    sequence.axes_styles["Slice"] = style_ss
-
-    style_rf = SeqStyle()
-    style_rf.color_fill = [0.6, 0.8, 0.6, 1.0]
-    style_rf.zorder = 10
-    sequence.axes_styles["RF"] = style_rf
-
-    style_adc = SeqStyle()
-    style_adc.color_fill = [0.9, 0.9, 0.6, 1.0]
-    sequence.axes_styles["ADC"] = style_adc
-else:
-    style_clear = SeqStyle()
-    style_clear.color = [0.0, 0, 0]
-    style_clear.color_fill = [1.0, 1.0, 1.0, 1.0]
-    style_clear.zorder = 10
-    sequence.axes_styles["Frequency"] = style_clear
-    sequence.axes_styles["Phase"] = style_clear
-    sequence.axes_styles["Slice"] = style_clear
-    sequence.axes_styles["RF"] = style_clear
-    sequence.axes_styles["ADC"] = style_clear
-
-sequence.add_element(
-    "RF", rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2,
-)
-sequence.add_element(
-    "ADC", adc, ampl=1, t_start=2.2, duration=1.6,
-)
-
-sequence.add_element(
-    "Phase",
+rf = Channel(t).add_element(rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2)
+adc = Channel(t).add_element(rect, ampl=1, t_start=2.2, duration=1.6)
+grad_phase = Channel(t).add_element(
     trapezoid,
     # some broadcasting magic for stacked gradients
     ampl=np.linspace(-1, 1, 10)[None, :],
@@ -76,24 +37,29 @@ sequence.add_element(
     t_flat_out=1.4,
     t_ramp_down=1.8,
 )
-
-sequence.add_element(
-    "Frequency", trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8,
+grad_freq = Channel(t).add_element(
+    trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8,
 )
-sequence.add_element(
-    "Frequency", trapezoid, ampl=0.5, t_start=2, t_flat_out=2.2, t_ramp_down=3.8,
+grad_freq.add_element(
+    trapezoid, ampl=0.5, t_start=2, t_flat_out=2.2, t_ramp_down=3.8,
 )
+grad_slice = Channel(t).add_element(trapezoid, t_start=0, t_flat_out=0.2, t_ramp_down=1)
+grad_slice.add_element(trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8)
 
-sequence.add_element("Slice", trapezoid, t_start=0, t_flat_out=0.2, t_ramp_down=1)
-sequence.add_element(
-    "Slice", trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8
+axes_map = {
+    "RF/ADC": [rf, adc],
+    "Phase\nEncoding": grad_phase,
+    "Slice\nSelection": grad_slice,
+    "Frequency\nEncoding": grad_freq,
+}
+sequence = Diagram(axes_map)
+sequence.plot_scheme(**style)
+sequence._plot_vline(axes_idx=slice(None), t=3.0, linestyle=":", color="k", alpha=0.5)
+sequence._plot_vline(axes_idx=slice(None), t=0.6, linestyle=":", color="k", alpha=0.5)
+sequence._plot_label(ax_idx=0, x=0.6, y=-0.6, text="90° Excitation Pulse")
+sequence._plot_label(ax_idx=0, x=3.0, y=0.3, text="Data Sampling")
+sequence._plot_hline(
+    ax_idx=0, xs=[0.6, 3.0], y=1.4, text="Echo-Time (TE)", facecolor="k"
 )
-
-fig, axes = sequence.plot_scheme()
-_plot_vline(axes, t=3.0, linestyle=":", color="k", alpha=0.5)
-_plot_vline(axes, t=0.6, linestyle=":", color="k", alpha=0.5)
-_plot_label(axes[0], 0.6, -0.6, text="90° Excitation Pulse")
-_plot_label(axes[0], 3.0, 0.5, text="Data Sampling")
-_plot_hline(axes[0], [0.6, 3.0], 1.4, text="Echo-Time (TE)", facecolor="k")
-axes[0].set_ylim([-1, 2])
+sequence.axes[0].set_ylim([-1, 2])
 plt.show()
