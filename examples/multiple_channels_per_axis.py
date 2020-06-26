@@ -14,9 +14,17 @@ parser.add_argument(
     "--colorblind", action="store_true", help="Use Seaborn colorblind palette",
 )
 args = parser.parse_args()
+print(args)
 if args.colors:
-    style = {}
-if args.colorblind:
+    colors = [
+        [0.0, 0.0, 0.0],
+        [0.9, 0.5, 0.0],
+        [0.7, 0.0, 0.0],
+        [0.0, 0.0, 0.7],
+        [0.0, 0.0, 0.0],
+    ]
+    style = dict(colors=colors, alpha=0.2)
+elif args.colorblind:
     style = {}
     import seaborn as sns
 
@@ -27,9 +35,14 @@ else:
 # define the time axis
 t = np.linspace(-0.2, 4.5, 10000)[:, None]
 
-rf = Channel(t).add_element(rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2)
-adc = Channel(t).add_element(rect, ampl=1, t_start=2.2, duration=1.6)
-grad_phase = Channel(t).add_element(
+rf = Channel(t)
+rf.add_element(rf_sinc, 1, t_start=0.2, duration=0.8, side_lobes=2)
+
+adc = Channel(t)
+adc.add_element(rect, ampl=1, t_start=2.2, duration=1.6)
+
+grad_phase = Channel(t)
+grad_phase.add_element(
     trapezoid,
     # some broadcasting magic for stacked gradients
     ampl=np.linspace(-1, 1, 10)[None, :],
@@ -37,13 +50,16 @@ grad_phase = Channel(t).add_element(
     t_flat_out=1.4,
     t_ramp_down=1.8,
 )
-grad_freq = Channel(t).add_element(
+grad_freq = Channel(t)
+grad_freq.add_element(
     trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8,
 )
 grad_freq.add_element(
     trapezoid, ampl=0.5, t_start=2, t_flat_out=2.2, t_ramp_down=3.8,
 )
-grad_slice = Channel(t).add_element(trapezoid, t_start=0, t_flat_out=0.2, t_ramp_down=1)
+
+grad_slice = Channel(t)
+grad_slice.add_element(trapezoid, t_start=0, t_flat_out=0.2, t_ramp_down=1)
 grad_slice.add_element(trapezoid, ampl=-1, t_start=1.2, t_flat_out=1.4, t_ramp_down=1.8)
 
 axes_map = {
@@ -52,6 +68,7 @@ axes_map = {
     "Slice\nSelection": grad_slice,
     "Frequency\nEncoding": grad_freq,
 }
+
 sequence = Diagram(axes_map)
 sequence.plot_scheme(**style)
 sequence._plot_vline(axes_idx=slice(None), t=3.0, linestyle=":", color="k", alpha=0.5)
